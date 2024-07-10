@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Models\User;
+use App\Models\Department;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\User;
 use App\Http\Controllers\API\BaseController;
-use App\Models\Departement;
 
-class LoginController extends BaseControllerus
+class LoginController extends BaseController
 {
     /**
      * Tenter la connexion utilisateur.
@@ -18,31 +18,46 @@ class LoginController extends BaseControllerus
      */
     public function login(Request $request)
     {
+        $credentials = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required'],
+        ]);
+
         // Laravel tente de connecter le user si l'email existe ET si le mdp en clair correspond à celui hashé 
-        if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
+        if (Auth::attempt($credentials)) {
 
-             // si la connexion fonctionne
-             // on récupère l'utilisateur et on charge son rôle
+            // forcer la régénération du token csrf
+            //https://laracasts.com/discuss/channels/laravel/is-it-really-necessary-to-call-session-regenerate-after-login
+            $request->session()->regenerate();
+
+            // si la connexion fonctionne, on récupère le user connecté et on charge son département
             $authUser = User::find(Auth::user()->id);
-            $authUser->load('role'); 
-
-            // on lui crée un token de session via la fonction createToken
-            // le token est hashé en Sha-256 avant d'être enregistré dans la table personnal_access_tokens
-            // on le stocke dans $success ainsi que ses autres infos renvoyées en json
-            $success['token'] =  $authUser->createToken('LoginUser' . $authUser->id)->plainTextToken;
-            $success['pseudo'] =  $authUser->pseudo;
-            $success["email"] = $authUser->email;
-            $success['id'] = $authUser->id;
-            $success['role'] = $authUser->role->role;
-            $success['departement'] = Departement::find($authUser->departement_id);
+            $authUser->load('department');
 
             // on renvoie la réponse 
-            return $this->sendResponse($success, 'Vous êtes connecté');
-            
+            return $this->sendResponse($authUser, 'Vous êtes connecté');
         } else {
             // si échec de la connexion, on renvoie un message d'erreur
-            return $this->sendError('Echec de la connexion.', 
-            ['error' => 'L\'utilisateur n\'existe pas ou le mot de passe est incorrect']);
+            return $this->sendError(
+                'Echec de la connexion.',
+                ['error' => 'L\'utilisateur n\'existe pas ou le mot de passe est incorrect'],
+                401
+            );
         }
+    }
+
+    /**
+     * Déconnexion utilisateur.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function logout(Request $request)
+    {
+        //dd($request);
+        // déconnecte de la session en cours et invalide le token du cookie de session
+        Auth::guard('web')->logout();
+
+        return $this->sendResponse(null, 'Déconnexion réussie');
     }
 }

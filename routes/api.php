@@ -31,33 +31,33 @@ Route::apiResource("users", App\Http\Controllers\API\UserController::class);
 
 // **************************************** routes LIEUX ***************************************************
 
-Route::apiResource("lieus", App\Http\Controllers\API\LieuController::class);
+Route::apiResource("lieus", App\Http\Controllers\API\PlaceController::class);
 
 //récupérer tous les lieux mêmes ceux non validés (pour l'admin)
-Route::get('getallplaces', [App\Http\Controllers\API\LieuController::class, 'getAllPlaces'])->name('getallplaces');
+Route::get('getallplaces', [App\Http\Controllers\API\PlaceController::class, 'getAllPlaces'])->name('getallplaces');
 
 // récupérer les lieux postés par l'utilisateur
-Route::post('lieus/getplacesbyuser', [App\Http\Controllers\API\LieuController::class, 'getPlacesByUser'])->name('getplacesbyuser');
+Route::post('lieus/getplacesbyuser', [App\Http\Controllers\API\PlaceController::class, 'getPlacesByUser'])->name('getplacesbyuser');
 
 // récupérer le nombre d'images par lieu
-Route::get('lieus/getimagesnumberbyplace/{lieu}', [App\Http\Controllers\API\LieuController::class, 'getImagesNumberByPlace'])->name('getImagesNumberByPlace');
+Route::get('lieus/getimagesnumberbyplace/{lieu}', [App\Http\Controllers\API\PlaceController::class, 'getImagesNumberByPlace'])->name('getImagesNumberByPlace');
 
 
 // ******************************************* routes AVIS *********************************************
 
-Route::apiResource("avis", App\Http\Controllers\API\AvisController::class);
+Route::apiResource("avis", App\Http\Controllers\API\ReviewController::class);
 
 
 // ************************************** routes CATEGORIES *************************************************
 
-Route::apiResource("categories", App\Http\Controllers\API\CategorieController::class);
+Route::apiResource("categories", App\Http\Controllers\API\CategoryController::class);
 
 
 // **************************************** routes FAVORIS ********************************************
 
-Route::apiResource("favoris", App\Http\Controllers\API\FavoriController::class)->except('index', 'update', 'show', 'delete');
-Route::get('favoris/{user}', [App\Http\Controllers\API\FavoriController::class, 'index'])->name('index');
-Route::delete('favoris/{user}/{lieu}', [App\Http\Controllers\API\FavoriController::class, 'destroy'])->name('destroy');
+Route::apiResource("favoris", App\Http\Controllers\API\FavoriteController::class)->except('index', 'update', 'show', 'delete');
+Route::get('favoris/{user}', [App\Http\Controllers\API\FavoriteController::class, 'index'])->name('index');
+Route::delete('favoris/{user}/{lieu}', [App\Http\Controllers\API\FavoriteController::class, 'destroy'])->name('destroy');
 
 
 //**************************************** routes IMAGES ***********************************************
@@ -73,7 +73,7 @@ Route::get('getnotificationsbyuser/{user}', [App\Http\Controllers\API\Notificati
 
 //************************************** route DEPARTEMENTS *************************************************
 
-route::get("/departements", [App\Http\Controllers\API\DepartementController::class, 'index'])->name("getDepartements");
+route::get("/departements", [App\Http\Controllers\API\DepartmentController::class, 'index'])->name("getDepartements");
 
 
 //************************************** route REGIONS *************************************************

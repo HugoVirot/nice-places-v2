@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\API;
 
 use App\Models\Region;
-use Illuminate\Http\Request;
 
 class RegionController extends BaseController
 {

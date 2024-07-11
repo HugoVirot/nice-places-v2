@@ -4,8 +4,8 @@ namespace App\Http\Controllers\API;
 
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\API\BaseController;
+use Illuminate\Support\Facades\Auth;
 
 class LoginController extends BaseController
 {
@@ -25,9 +25,12 @@ class LoginController extends BaseController
         // Laravel tente de connecter le user si l'email existe ET si le mdp en clair correspond à celui hashé 
         if (Auth::attempt($credentials)) {
 
-            // forcer la régénération du token csrf
+            // forcer la régénération du token csrf : à checker car déclenche l'erreur CSRF token mismatch
+            // ou l'erreur "Session store not set on request" si pas de header Origin : 127.0.0.1:8000
             //https://laracasts.com/discuss/channels/laravel/is-it-really-necessary-to-call-session-regenerate-after-login
-            $request->session()->regenerate();
+            // if ($request->session()) {
+            //     $request->session()->regenerate();
+            // }
 
             // si la connexion fonctionne, on récupère le user connecté et on charge son département
             $authUser = User::find(Auth::user()->id);

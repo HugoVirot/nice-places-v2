@@ -21,6 +21,9 @@ Route::post('register', [App\Http\Controllers\API\UserController::class, 'store'
 // connexion 
 Route::post('login', [App\Http\Controllers\API\LoginController::class, 'login'])->name('login');
 
+// déconnexion 
+Route::post('logout', [App\Http\Controllers\API\LoginController::class, 'logout'])->name('logout');
+
 
 // ************* Pour toutes les routes : apiResource = mode ressource version API, sans create et edit ****************
 
@@ -31,7 +34,7 @@ Route::apiResource("users", App\Http\Controllers\API\UserController::class);
 
 // **************************************** routes LIEUX ***************************************************
 
-Route::apiResource("lieus", App\Http\Controllers\API\PlaceController::class);
+Route::apiResource("places", App\Http\Controllers\API\PlaceController::class);
 
 //récupérer tous les lieux mêmes ceux non validés (pour l'admin)
 Route::get('getallplaces', [App\Http\Controllers\API\PlaceController::class, 'getAllPlaces'])->name('getallplaces');
@@ -45,7 +48,7 @@ Route::get('lieus/getimagesnumberbyplace/{lieu}', [App\Http\Controllers\API\Plac
 
 // ******************************************* routes AVIS *********************************************
 
-Route::apiResource("avis", App\Http\Controllers\API\ReviewController::class);
+Route::apiResource("reviews", App\Http\Controllers\API\ReviewController::class);
 
 
 // ************************************** routes CATEGORIES *************************************************
@@ -55,9 +58,9 @@ Route::apiResource("categories", App\Http\Controllers\API\CategoryController::cl
 
 // **************************************** routes FAVORIS ********************************************
 
-Route::apiResource("favoris", App\Http\Controllers\API\FavoriteController::class)->except('index', 'update', 'show', 'delete');
-Route::get('favoris/{user}', [App\Http\Controllers\API\FavoriteController::class, 'index'])->name('index');
-Route::delete('favoris/{user}/{lieu}', [App\Http\Controllers\API\FavoriteController::class, 'destroy'])->name('destroy');
+Route::apiResource("favorites", App\Http\Controllers\API\FavoriteController::class)->except('index', 'update', 'show', 'delete');
+Route::get('favorites/{user}', [App\Http\Controllers\API\FavoriteController::class, 'index'])->name('index');
+Route::delete('favorites/{user}/{lieu}', [App\Http\Controllers\API\FavoriteController::class, 'destroy'])->name('destroy');
 
 
 //**************************************** routes IMAGES ***********************************************
@@ -73,7 +76,7 @@ Route::get('getnotificationsbyuser/{user}', [App\Http\Controllers\API\Notificati
 
 //************************************** route DEPARTEMENTS *************************************************
 
-route::get("/departements", [App\Http\Controllers\API\DepartmentController::class, 'index'])->name("getDepartements");
+route::get("/departments", [App\Http\Controllers\API\DepartmentController::class, 'index'])->name("getDepartements");
 
 
 //************************************** route REGIONS *************************************************

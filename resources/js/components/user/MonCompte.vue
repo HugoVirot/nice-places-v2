@@ -23,7 +23,7 @@
                                 <label for="email" class="col-md-4 col-form-label text-md-right">e-mail</label>
 
                                 <div class="col-md-6">
-                                    <input v-model="email" id="email" type="email" class="form-control" name="email"
+                                    <input v-model="userStore.email" id="email" type="email" class="form-control" name="email"
                                         autocomplete="email">
                                 </div>
                             </div>
@@ -31,14 +31,14 @@
                             <div class="form-group row m-2">
                                 <p class="mb-2 blueElement mt-2">Département actuel :
                                     <span v-if="departement" class="fs-5"> {{ departement.nom }} ({{ departement.code
-                                    }})</span>
+                                        }})</span>
                                     <span v-else class="fs-5"> aucun</span>
                                 </p>
                                 <label for="departement" class="col-md-4 col-form-label text-md-right">changer de
                                     département</label>
 
                                 <div class="col-md-6">
-                                    <select id="departement" v-model="departement" class="form-select mx-auto"
+                                    <select id="departement" v-model="userStore.departement" class="form-select mx-auto"
                                         aria-label="filtre" autocomplete="departement">
                                         <option value="null">aucun</option>
                                         <option v-for="department in departements" :value="department">
@@ -84,8 +84,8 @@
                                     passe</label>
 
                                 <div class="col-md-6">
-                                    <input v-model="password" @keyup="checkPassword(password)" id="password" type="password"
-                                        class="form-control" name="password">
+                                    <input v-model="password" @keyup="checkPassword(password)" id="password"
+                                        type="password" class="form-control" name="password">
                                 </div>
                             </div>
 
@@ -93,35 +93,40 @@
 
                                 <div class="row">
                                     <p>minimum 8 caractères
-                                        <i v-if="eightCharacters" class="p-2 bg-white rounded-circle greenIcon fa-solid fa-check"></i>
+                                        <i v-if="eightCharacters"
+                                            class="p-2 bg-white rounded-circle greenIcon fa-solid fa-check"></i>
                                         <i v-else class="p-2 bg-white rounded-circle fa-solid fa-xmark"></i>
                                     </p>
                                 </div>
 
                                 <div class="row">
                                     <p>minimum 1 lettre
-                                        <i v-if="oneLetter" class="p-2 bg-white rounded-circle greenIcon fa-solid fa-check"></i>
+                                        <i v-if="oneLetter"
+                                            class="p-2 bg-white rounded-circle greenIcon fa-solid fa-check"></i>
                                         <i v-else class="p-2 bg-white rounded-circle fa-solid fa-xmark"></i>
                                     </p>
                                 </div>
 
                                 <div class="row">
                                     <p>minimum 1 chiffre
-                                        <i v-if="oneDigit" class="p-2 bg-white rounded-circle greenIcon fa-solid fa-check"></i>
+                                        <i v-if="oneDigit"
+                                            class="p-2 bg-white rounded-circle greenIcon fa-solid fa-check"></i>
                                         <i v-else class="p-2 bg-white rounded-circle fa-solid fa-xmark"></i>
                                     </p>
                                 </div>
 
                                 <div class="row">
                                     <p>minimum 1 majuscule et 1 minuscule
-                                        <i v-if="oneUppercaseOneLowercase" class="p-2 bg-white rounded-circle greenIcon fa-solid fa-check"></i>
+                                        <i v-if="oneUppercaseOneLowercase"
+                                            class="p-2 bg-white rounded-circle greenIcon fa-solid fa-check"></i>
                                         <i v-else class="p-2 bg-white rounded-circle fa-solid fa-xmark"></i>
                                     </p>
                                 </div>
 
                                 <div class="row">
                                     <p>minimum 1 caractère spécial
-                                        <i v-if="oneSpecialCharacter" class="p-2 bg-white rounded-circle greenIcon fa-solid fa-check"></i>
+                                        <i v-if="oneSpecialCharacter"
+                                            class="p-2 bg-white rounded-circle greenIcon fa-solid fa-check"></i>
                                         <i v-else class="p-2 bg-white rounded-circle fa-solid fa-xmark"></i>
                                     </p>
                                 </div>
@@ -194,140 +199,108 @@
     </div>
 </template>
 
-<script>
+<script setup>
 import axios from 'axios'
 import ValidationErrors from "../utilities/ValidationErrors.vue"
 import { useUserStore } from '../../stores/userStore'
-import { useLieuxStore } from '../../stores/lieuxStore'
-import { mapState, mapWritableState } from 'pinia';
-import { mapActions } from 'pinia'
+import { placesStore } from '../../stores/placesStore'
+import { useRouter } from "vue-router"
 
-export default {
+const userStore = useUserStore()
+const placesStore = usePlacesStore()
+const router = useRouter()
 
-    computed: {
-        ...mapWritableState(useUserStore, [
-            'pseudo',
-            'email',
-            'id',
-            'departement']),
+const oldPassword = ref('')
+const password = ref('')
+const password_confirmation = ref('')
+const passwordTyped = ref(false)
+const eightCharacters = ref(false)
+const oneLetter = ref(false)
+const oneUppercaseOneLowercase = ref(false)
+const oneDigit = ref(false)
+const oneSpecialCharacter = ref(false)
+const passwordCorrect = ref(false)
+const validationErrors = ref("")
 
-        ...mapState(useLieuxStore, [
-            'departements'
-        ]),
-    },
+// vérifier si le mot de passe réunit les critères de sécurité
+const checkPassword = password => {
 
-    data() {
-        return {
-            oldPassword: "",
-            password: "",
-            password_confirmation: "",
-            passwordTyped: false,
-            eightCharacters: false,
-            oneLetter: false,
-            oneUppercaseOneLowercase: false,
-            oneDigit: false,
-            oneSpecialCharacter: false,
-            passwordCorrect: false,
-            validationErrors: ""
-        }
-    },
+    passwordTyped.value = true
 
-    components: { ValidationErrors },
-
-    methods: {
-        ...mapActions(useUserStore, ['storeUserData']),
-
-        // vérifier si le mot de passe réunit les critères de sécurité
-        checkPassword(password) {
-
-            this.passwordTyped = true
-
-            if (password.length >= 8) {
-                this.eightCharacters = true
-            } else {
-                this.eightCharacters = false
-            }
-
-            if (password.match(/[a-z]/)) {
-                this.oneLetter = true
-            } else {
-                this.oneLetter = false
-            }
-
-            if (password.match(/(?=.*[a-z])(?=.*[A-Z])/)) {
-                this.oneUppercaseOneLowercase = true
-            } else {
-                this.oneUppercaseOneLowercase = false
-            }
-
-            if (password.match(/\d/)) {
-                this.oneDigit = true
-            } else {
-                this.oneDigit = false;
-            }
-
-            if (password.match(/[!@#$%^&*?]/)) {
-                this.oneSpecialCharacter = true
-            } else {
-                this.oneSpecialCharacter = false;
-            }
-
-            if (this.eightCharacters && this.oneLetter && this.oneUppercaseOneLowercase && this.oneDigit && this.oneSpecialCharacter) {
-                this.passwordCorrect = true
-            }
-        },
-
-        // on envoie les modifs pour les sauvegarder en bdd puis on redirige
-        sendData() {
-            axios.put('/api/users/' + this.id, {
-                email: this.email, departement_id: this.departement.id, oldPassword: this.oldPassword,
-                password: this.password, password_confirmation: this.password_confirmation
-            }).then(response => {
-                this.storeUserData(response.data.data)
-                this.$router.push('/successmessage/lastpage/' + response.data.message)
-            }).catch((error) => {
-                if(error.response){
-                this.validationErrors = error.response.data.errors;
-                }
-            })
-        },
-
-        // suppression du compte utilisateur
-        deleteAccount() {
-            axios.delete('/api/users/' + this.id)
-                .then((response) => {
-                    // suppression compte fonctionne (plus dans bdd) mais il ne se passe rien ensuite
-                    // => pas de déconnexion, mais le user n'existe plus. On reste connecté.
-                    // à corriger
-                    this.logOutUser()
-                    this.$router.push('/successmessagehome/' + response.data.message)
-                })
-                .catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-                })
-
-        },
-
-        // déconnecter l'utilisateur (utilisé après la suppression de compte)
-        logOutUser() {
-            // on réinitialise le store 
-            const userStore = useUserStore()
-            userStore.$reset()
-
-            // on redirige vers l'accueil
-            this.$router.push('/successmessagehome/Déconnexion réussie')
-        }
-    },
-
-    created() {
-        const userStore = useUserStore()
-
-        if (userStore.token) {
-            // pour transmettre le token (créé par l'API) avec chaque requête si connecté
-            axios.defaults.headers.common.Authorization = `Bearer ${userStore.token}`
-        }
+    if (password.length >= 8) {
+        eightCharacters.value = true
+    } else {
+        eightCharacters.value = false
     }
+
+    if (password.match(/[a-z]/)) {
+        oneLetter.value = true
+    } else {
+        oneLetter.value = false
+    }
+
+    if (password.match(/(?=.*[a-z])(?=.*[A-Z])/)) {
+        oneUppercaseOneLowercase.value = true
+    } else {
+        oneUppercaseOneLowercase.value = false
+    }
+
+    if (password.match(/\d/)) {
+        oneDigit.value = true
+    } else {
+        oneDigit.value = false;
+    }
+
+    if (password.match(/[!@#$%^&*?]/)) {
+        oneSpecialCharacter.value = true
+    } else {
+        oneSpecialCharacter.value = false;
+    }
+
+    if (eightCharacters && oneLetter && oneUppercaseOneLowercase && oneDigit && oneSpecialCharacter) {
+        passwordCorrect.value = true
+    }
+},
+
+// on envoie les modifs pour les sauvegarder en bdd puis on redirige
+const sendData = () => {
+    axios.put('/api/users/' + userStore.id, {
+        email: userStore.email, departement_id: userStore.departement.id, oldPassword: oldPassword,
+        password: password, password_confirmation: password_confirmation
+    }).then(response => {
+        this.storeUserData(response.data.data)
+        router.push('/successmessage/lastpage/' + response.data.message)
+    }).catch(error => {
+        if (error.response) {
+            validationErrors.value = error.response.data.errors;
+        }
+    })
 }
+
+// suppression du compte utilisateur
+const deleteAccount = () => {
+    axios.delete('/api/users/' + userStore.id)
+        .then((response) => {
+            // suppression compte fonctionne (plus dans bdd) mais il ne se passe rien ensuite
+            // => pas de déconnexion, mais le user n'existe plus. On reste connecté.
+            // à corriger
+            logOutUser()
+            router.push('/successmessagehome/' + response.data.message)
+        })
+        .catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
+            alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
+        })
+}
+
+// déconnecter l'utilisateur (utilisé après la suppression de compte)
+logOutUser() {
+    // on réinitialise le store 
+    userStore.$reset()
+
+    // on redirige vers l'accueil
+    router.push('/successmessagehome/Déconnexion réussie')
+}
+
 </script>
 
 <style scoped>

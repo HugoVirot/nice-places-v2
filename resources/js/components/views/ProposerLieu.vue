@@ -1,103 +1,95 @@
-<script>
+<script setup>
 import axios from "axios";
 import ValidationErrors from "../utilities/ValidationErrors.vue"
-import { mapState } from 'pinia'
 import { useUserStore } from '../../stores/userStore'
-import { useLieuxStore } from '../../stores/lieuxStore'
+import { usePlacesStore } from "../../stores/placesStore";
+import { useRouter } from "vue-router";
 
-export default {
+const userStore = useUserStore()
+const placesStore = usePlacesStore()
+const router = useRouter()
+// computed: {
+//     ...mapState(useUserStore, [
+//         'name', 'userLoggedIn', 'role', 'id'
+//     ]),
 
-    computed: {
-        ...mapState(useUserStore, [
-            'pseudo', 'userLoggedIn', 'role', 'id'
-        ]),
+//     ...mapState(useLieuxStore, ['categorys', 'departments', 'storeNewLieu'])
+// },
 
-        ...mapState(useLieuxStore, ['categories', 'departements', 'storeNewLieu'])
-    },
+const name = ref("")
+const description = ref("")
+const latitude = ref("")
+const longitude = ref("")
+const category = ref("")
+const note = ref("")
+const time = ref("")
+const difficulty = ref("")
+const kilometres = ref("")
+const department = ref("")
+const adress = ref("")
+const postcode = ref("")
+const city = ref("")
+const formData = new FormData()
+const validationErrors = ref("")
 
-    data() {
-        return {
-            nom: "",
-            description: "",
-            images: [],
-            latitude: "",
-            longitude: "",
-            categorie: "",
-            note: "",
-            temps: "",
-            difficulte: "",
-            kilometres: "",
-            departement: "",
-            adresse: "",
-            code_postal: "",
-            ville: "",
-            formData: new FormData(),
-            validationErrors: ""
-        }
-    },
+// poste le nouveau place pour le sauvegarder en base de données
+const sendData = () => {
 
-    components: { ValidationErrors },
+    formData.append("name", this.name);
+    formData.append("description", this.description);
+    formData.append("latitude", this.latitude);
+    formData.append("longitude", this.longitude);
+    formData.append("category", this.category);
+    formData.append("note", this.note);
+    formData.append("time", this.time);
+    formData.append("difficulty", this.difficulty);
+    formData.append("kilometres", this.kilometres);
+    formData.append("department", this.department);
+    formData.append("adress", this.adress);
+    formData.append("postcode", this.postcode);
+    formData.append("city", this.city);
+    formData.append("user_id", this.id);
 
-    methods: {
+    axios.post('/api/places', formData)
+        .then((response) => {
+            // on ajoute le nouveau place à la liste des placex du store
+            // (cela évite de récupérer la liste complète via un appel API pour un place)
+            // il ne sera pas visible tout de suite mais apparaîtra dans "mes placex postés"
+            placesStore.storeNewPlace(response.data.data)
 
-        // poste le nouveau lieu pour le sauvegarder en base de données
-        sendData() {
+            let message = response.data.message
+            let place = response.data.data
 
-            this.formData.append("nom", this.nom);
-            this.formData.append("description", this.description);
-            this.formData.append("latitude", this.latitude);
-            this.formData.append("longitude", this.longitude);
-            this.formData.append("categorie", this.categorie);
-            this.formData.append("note", this.note);
-            this.formData.append("temps", this.temps);
-            this.formData.append("difficulte", this.difficulte);
-            this.formData.append("kilometres", this.kilometres);
-            this.formData.append("departement", this.departement);
-            this.formData.append("adresse", this.adresse);
-            this.formData.append("code_postal", this.code_postal);
-            this.formData.append("ville", this.ville);
-            this.formData.append("user_id", this.id);
+            // si utilisateur normal, on lui sauvegarde une notification en base de données
+            // if (this.role !== "admin") {
+            createNotification(place.id)
+            // }
 
-            axios.post('/api/lieus', this.formData)
-                .then((response) => {
-                    // on ajoute le nouveau lieu à la liste des lieux du store
-                    // (cela évite de récupérer la liste complète via un appel API pour un lieu)
-                    // il ne sera pas visible tout de suite mais apparaîtra dans "mes lieux postés"
-                    this.storeNewLieu(response.data.data)
+            router.push('/successmessageuploadimages/' + message + '/' + place.id)
+        }).catch((error) => {
+            validationErrors.value = error.response.data.errors;
+        })
+},
 
-                    let message = response.data.message
-                    let lieu = response.data.data
-
-                    // si utilisateur normal, on lui sauvegarde une notification en base de données
-                    // if (this.role !== "admin") {
-                    this.createNotification(lieu.id)
-                    // }
-
-                    this.$router.push('/successmessageuploadimages/' + message + '/' + lieu.id)
-                }).catch((error) => {
-                    this.validationErrors = error.response.data.errors;
-                })
-        },
-
-        // on sauvegarde une notification en base de données pour indiquer à l'utilisateur
-        // que son lieu a bien été proposé et est mis en attente
-        createNotification(lieuId) {
-            let titre = `Votre lieu ${this.nom} a bien été proposé !`;
-            let message = `<p>Merci ${this.pseudo} !<p><br> 
+// on sauvegarde une notification en base de données pour indiquer à l'utilisateur
+// que son place a bien été proposé et est mis en attente
+const createNotification = placeId => {
+    let title = `Votre place ${name} a bien été proposé !`;
+    let message = `<p>Merci ${userStore.name} !<p><br> 
             <i style="color:#94D1BE" class="mx-auto fa-solid fa-paper-plane fa-5x p-2"></i><br>
-            <p>Votre lieu, ${this.nom}, a bien été proposé.<br>
+            <p>Votre place, ${name}, a bien été proposé.<br>
             Il a été mis en attente et va être vérifié par l'administrateur.<br>
             Ce dernier reviendra alors vers vous.<br>
             A très bientôt.</p>`
 
-            axios.post('/api/notifications', { titre: titre, message: message, user_id: this.id, lieu_id: lieuId },)
-                .then(response => console.log(response.data.message))
-                .catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-                })
-        }
-    }
+    axios.post('/api/notifications', { title: title, message: message, user_id: userStore.id, place_id: placeId },)
+        .then(response => console.log(response.data.message))
+        .catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
+            alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
+        })
 }
+
+
 </script>
 
 <template>
@@ -116,7 +108,7 @@ export default {
                 <div class="card">
                     <div class="card-header text-white mb-3">Partagez vos coups de coeur avec nous !</div>
 
-                    <a href="https://www.lecoindunet.com/coordonnees-gps-lieu-google-maps" target="_blank">
+                    <a href="https://www.lecoindunet.com/coordonnees-gps-place-google-maps" target="_blank">
                         <button class="btn blueButton my-3">
                             méthode pour trouver la latitude et la longitude d'un endroit (PC/smartphone/tablette)
                         </button>
@@ -127,11 +119,11 @@ export default {
                         <form @submit.prevent="sendData" enctype="multipart/form-data">
 
                             <div class="form-group row m-2">
-                                <label for="nom" class="col-md-4 col-form-label text-md-right">nom</label>
+                                <label for="name" class="col-md-4 col-form-label text-md-right">name</label>
 
                                 <div class="col-md-6">
-                                    <input v-model="nom" id="nom" type="text" class="form-control" name="nom" required
-                                        autocomplete="nom" autofocus>
+                                    <input v-model="name" id="name" type="text" class="form-control" name="name"
+                                        required autocomplete="name" autofocus>
                                 </div>
                             </div>
 
@@ -164,11 +156,12 @@ export default {
                             <div class="form-text">entre -180 et 180. Partie décimale : maximum 7 chiffres.</div>
 
                             <div class="form-group row m-2">
-                                <label for="categorie" class="col-md-4 col-form-label text-md-right">catégorie</label>
+                                <label for="category" class="col-md-4 col-form-label text-md-right">catégorie</label>
                                 <div class="col-md-6">
-                                    <select required v-model="categorie" class="form-select" aria-label="categorie" name="categorie">
-                                        <option v-for="categorie in categories" :key="categorie.id"
-                                            :value="categorie.id">{{ categorie.nom }}</option>
+                                    <select required v-model="category" class="form-select" aria-label="category"
+                                        name="category">
+                                        <option v-for="category in categorys" :key="category.id" :value="category.id">{{
+                                            category.name }}</option>
                                     </select>
                                 </div>
                             </div>
@@ -184,21 +177,22 @@ export default {
                             </div>
 
                             <div class="form-group row m-2">
-                                <label for="temps" class="col-md-4 col-form-label text-md-right">temps moyen en
+                                <label for="time" class="col-md-4 col-form-label text-md-right">time moyen en
                                     heures</label>
 
                                 <div class="col-md-6">
-                                    <input min="1" max="24" v-model="temps" id="temps" type="number"
-                                        class="form-control" name="temps" required autocomplete="temps">
+                                    <input min="1" max="24" v-model="time" id="time" type="number" class="form-control"
+                                        name="time" required autocomplete="time">
                                 </div>
                             </div>
 
                             <div class="form-group row m-2">
-                                <label for="temps" class="col-md-4 col-form-label text-md-right">niveau de
+                                <label for="time" class="col-md-4 col-form-label text-md-right">niveau de
                                     difficulté</label>
 
                                 <div class="col-md-6">
-                                    <select required v-model="difficulte" class="form-select" aria-label="difficulte" name="difficulte">
+                                    <select required v-model="difficulty" class="form-select" aria-label="difficulty"
+                                        name="difficulty">
                                         <option selected value="famille">famille</option>
                                         <option value="amateur">amateur</option>
                                         <option value="sportif">sportif</option>
@@ -207,7 +201,7 @@ export default {
                             </div>
 
                             <div class="form-group row m-2">
-                                <label for="temps" class="col-md-4 col-form-label text-md-right">distance moyenne en
+                                <label for="time" class="col-md-4 col-form-label text-md-right">distance moyenne en
                                     km (facultatif)</label>
 
                                 <div class="col-md-6">
@@ -218,41 +212,41 @@ export default {
 
                             <div class="form-group row m-2">
                                 <label class="col-md-4 col-form-label text-md-right"
-                                    for="departement">département</label>
-                                <select id="departement" name="departement" required v-model="departement" class="form-select w-50 mx-auto"
-                                    aria-label="filtre">
-                                    <option v-for="(departement, index) in departements" :selected="index == 0"
-                                        :value="departement.id">{{
-                                            departement.code
-                                        }} - {{ departement.nom }}</option>
+                                    for="department">département</label>
+                                <select id="department" name="department" required v-model="department"
+                                    class="form-select w-50 mx-auto" aria-label="filtre">
+                                    <option v-for="(department, index) in departments" :selected="index == 0"
+                                        :value="department.id">{{
+                                            department.code
+                                        }} - {{ department.name }}</option>
                                 </select>
                             </div>
 
                             <div class="form-group row m-2">
-                                <label for="adresse" class="col-md-4 col-form-label text-md-right">adresse</label>
+                                <label for="adress" class="col-md-4 col-form-label text-md-right">adress</label>
 
                                 <div class="col-md-6">
-                                    <input v-model="adresse" id="adresse" type="text" class="form-control"
-                                        name="adresse" required autocomplete="adresse">
+                                    <input v-model="adress" id="adress" type="text" class="form-control" name="adress"
+                                        required autocomplete="adress">
                                 </div>
                             </div>
 
                             <div class="form-group row m-2">
-                                <label for="code_postal" class="col-md-4 col-form-label text-md-right">code
+                                <label for="postcode" class="col-md-4 col-form-label text-md-right">code
                                     postal</label>
 
                                 <div class="col-md-6">
-                                    <input v-model="code_postal" id="code_postal" type="text" class="form-control"
-                                        name="code_postal" required autocomplete="code_postal">
+                                    <input v-model="postcode" id="postcode" type="text" class="form-control"
+                                        name="postcode" required autocomplete="postcode">
                                 </div>
                             </div>
 
                             <div class="form-group row m-2">
-                                <label for="ville" class="col-md-4 col-form-label text-md-right">ville</label>
+                                <label for="city" class="col-md-4 col-form-label text-md-right">city</label>
 
                                 <div class="col-md-6">
-                                    <input v-model="ville" id="ville" type="text" class="form-control" name="ville"
-                                        required autocomplete="ville">
+                                    <input v-model="city" id="city" type="text" class="form-control" name="city"
+                                        required autocomplete="city">
                                 </div>
                             </div>
 
@@ -272,7 +266,7 @@ export default {
         </div>
     </div>
     <div v-else class="container">
-        <p class="mb-2">Vous devez être connecté pour proposer un lieu.</p>
+        <p class="mb-2">Vous devez être connecté pour proposer un place.</p>
         <router-link to="/connexion"><button class="btn btn-lg greenButton mb-3 rounded-pill">Se connecter</button>
         </router-link>
 

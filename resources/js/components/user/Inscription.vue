@@ -44,7 +44,8 @@
                                         required autocomplete="email">
                                 </div>
                             </div>
-                            <div id="emailHelp" class="form-text">Nous ne partagerons jamais votre e-mail avec des tiers.
+                            <div id="emailHelp" class="form-text">Nous ne partagerons jamais votre e-mail avec des
+                                tiers.
                             </div>
 
                             <div class="form-group row m-2">
@@ -74,8 +75,9 @@
                                 <label for="password" class="col-md-4 col-form-label text-md-right">mot de passe</label>
 
                                 <div class="col-md-6">
-                                    <input v-model="password" @keyup="checkPassword(password)" id="password" type="password"
-                                        class="form-control" name="password" required autocomplete="new-password">
+                                    <input v-model="password" @keyup="checkPassword(password)" id="password"
+                                        type="password" class="form-control" name="password" required
+                                        autocomplete="new-password">
                                 </div>
                             </div>
 
@@ -130,7 +132,8 @@
                             </div>
 
                             <div class="form-group row m-2">
-                                <label for="password_confirmation" class="col-md-4 col-form-label text-md-right">confirmez
+                                <label for="password_confirmation"
+                                    class="col-md-4 col-form-label text-md-right">confirmez
                                     le
                                     mot de passe</label>
 
@@ -181,110 +184,100 @@
     </div>
 </template>
 
-<script>
+<script setup>
 import axios from 'axios'
 import ValidationErrors from "../utilities/ValidationErrors.vue"
 import { useLieuxStore } from "../../stores/lieuxStore.js"
-import { mapState } from 'pinia';
 
-export default {
+const placesStore = usePlacesStore()
 
-    computed: {
-        ...mapState(useLieuxStore, ['departements'])
-    },
+const pseudo = ref('')
+const email = ref('')
+const departement = ref('')
+const password = ref('')
+const password_confirmation = ref('')
+const passwordTyped = ref(false)
+const eightCharacters = ref(false)
+const oneLetter = ref(false)
+const oneUppercaseOneLowercase = ref(false)
+const oneDigit = ref(false)
+const oneSpecialCharacter = ref(false)
+const passwordCorrect = ref(false)
+const validationErrors = ref("")
+const politique = ref(false)
 
-    data() {
-        return {
-            pseudo: "",
-            email: "",
-            departement: "",
-            password: "",
-            password_confirmation: "",
-            passwordTyped: false,
-            eightCharacters: false,
-            oneLetter: false,
-            oneUppercaseOneLowercase: false,
-            oneDigit: false,
-            oneSpecialCharacter: false,
-            passwordCorrect: false,
-            validationErrors: "",
-            politique: false
-        }
-    },
-    components: { ValidationErrors },
+const sendData = () => {
 
-    methods: {
-        sendData() {          
-            axios.post('/api/register', { pseudo: this.pseudo, email: this.email, departement: this.departement, 
-                password: this.password, password_confirmation: this.password_confirmation })
-                .then(response => {
+    axios.post('/api/register', {
+        pseudo: this.pseudo, email: this.email, departement: this.departement,
+        password: this.password, password_confirmation: this.password_confirmation
+    })
+        .then(response => {
 
-                    let message = response.data.message
-                    // on enregistre une notification de confirmation à destination de l'utilisateur
-                    this.createNotification(response.data.data.id)
+            let message = response.data.message
+            // on enregistre une notification de confirmation à destination de l'utilisateur
+            this.createNotification(response.data.data.id)
 
-                    this.$router.push('/successmessage/connexion/' + message);
-                })
-                .catch((error) => {
-                    this.validationErrors = error.response.data.errors;
-                })
-        },
+            this.$router.push('/successmessage/connexion/' + message);
+        })
+        .catch((error) => {
+            this.validationErrors = error.response.data.errors;
+        })
+},
 
-        createNotification(userId) {
+const createNotification = userId => {
 
-            let titre = `Bienvenue sur Nice Places ${this.pseudo} !`;
-            let message = `<p class="text-secondary">Bonjour ${this.pseudo} et bienvenue sur Nice Places !<br>
+    let titre = `Bienvenue sur Nice Places ${this.pseudo} !`;
+    let message = `<p class="text-secondary">Bonjour ${this.pseudo} et bienvenue sur Nice Places !<br>
             Votre inscription est réussie.<br>
             <i style="color:#94D1BE" class="mx-auto my-3 fa-solid fa-door-open fa-5x"></i><br>
             Venez découvrir la France et partager vos lieux préférés avec nous !<br>
             A très bientôt.</p>
             <p class="text-end">L'administrateur.</p>`
 
-            axios.post('/api/notifications', { titre: titre, message: message, user_id: userId, lieu_id: null })
-                .then(response => console.log(response.data.message))
-                .catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-                })
-        },
+    axios.post('/api/notifications', { titre: titre, message: message, user_id: userId, lieu_id: null })
+        .then(response => console.log(response.data.message))
+        .catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
+            alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
+        })
+},
 
-        checkPassword(password) {
+const checkPassword = password => {
 
-            this.passwordTyped = true
+    this.passwordTyped = true
 
-            if (password.length >= 8) {
-                this.eightCharacters = true
-            } else {
-                this.eightCharacters = false
-            }
+    if (password.length >= 8) {
+        this.eightCharacters = true
+    } else {
+        this.eightCharacters = false
+    }
 
-            if (password.match(/[a-z]/)) {
-                this.oneLetter = true
-            } else {
-                this.oneLetter = false
-            }
+    if (password.match(/[a-z]/)) {
+        this.oneLetter = true
+    } else {
+        this.oneLetter = false
+    }
 
-            if (password.match(/(?=.*[a-z])(?=.*[A-Z])/)) {
-                this.oneUppercaseOneLowercase = true
-            } else {
-                this.oneUppercaseOneLowercase = false
-            }
+    if (password.match(/(?=.*[a-z])(?=.*[A-Z])/)) {
+        this.oneUppercaseOneLowercase = true
+    } else {
+        this.oneUppercaseOneLowercase = false
+    }
 
-            if (password.match(/\d/)) {
-                this.oneDigit = true
-            } else {
-                this.oneDigit = false;
-            }
+    if (password.match(/\d/)) {
+        this.oneDigit = true
+    } else {
+        this.oneDigit = false;
+    }
 
-            if (password.match(/[!@#$%^&*?]/)) {
-                this.oneSpecialCharacter = true
-            } else {
-                this.oneSpecialCharacter = false;
-            }
+    if (password.match(/[!@#$%^&*?]/)) {
+        this.oneSpecialCharacter = true
+    } else {
+        this.oneSpecialCharacter = false;
+    }
 
-            if (this.eightCharacters && this.oneLetter && this.oneUppercaseOneLowercase && this.oneDigit && this.oneSpecialCharacter) {
-                this.passwordCorrect = true
-            }
-        }
+    if (this.eightCharacters && this.oneLetter && this.oneUppercaseOneLowercase && this.oneDigit && this.oneSpecialCharacter) {
+        this.passwordCorrect = true
     }
 }
 </script>
@@ -303,5 +296,5 @@ export default {
 
 .fa-xmark {
     color: red
-}</style>
-
+}
+</style>

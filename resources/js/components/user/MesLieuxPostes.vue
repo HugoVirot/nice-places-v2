@@ -9,16 +9,16 @@
 
         <div class="row">
 
-            <div v-if="userPlaces.length == 0"><i class="greenIcon fa-solid fa-xmark fa-5x"></i>
+            <div v-if="userStore.userPlaces.length == 0"><i class="greenIcon fa-solid fa-xmark fa-5x"></i>
                 <p>Vous n'avez posté aucun lieu</p>
                 <router-link to="/proposerlieu"><button class="btn btn-lg mt-3 greenButton rounded-pill">Proposer un
                         lieu</button>
                 </router-link>
             </div>
 
-            <div v-else class="col-lg-6 border border-3 border-white" v-for="userPlace in userPlaces"
+            <div v-else class="col-lg-6 border border-3 border-white" v-for="userPlace in userStore.userPlaces"
                 :key="userPlace.id">
-                <RectangleLieu :lieu="userPlace" />
+                <PlaceCard :lieu="userPlace" />
             </div>
 
         </div>
@@ -26,43 +26,28 @@
 
 </template>
 
-<script>
+<script setup>
 import { useUserStore } from "../../stores/userStore";
-import { mapState } from "pinia";
-import { mapActions } from "pinia";
-import RectangleLieu from "../utilities/RectangleLieu.vue";
+import PlaceCard from "../utilities/PlaceCard.vue";
+import { onBeforeMount } from "vue";
 
-export default {
+const store = useUserStore()
 
-    components: {
-        RectangleLieu
-    },
-
-    computed: {
-        ...mapState(useUserStore, ['id', 'userPlaces'])
-    },
-
-    methods: {
-
-        ...mapActions(useUserStore, ['storeUserPlaces']),
-
-        // on récupère les lieux postes par le user
-        getLieuxPostes() {
-            axios.post("/api/lieus/getplacesbyuser", null, {
-                params: {
-                    user_id: this.id
-                }
-            })
-                .then(response => this.storeUserPlaces(response.data.data))
-                .catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-                })
-        },
-    },
-
-    created() {
-        // on récupère les lieux postés par l'utilisateur
-        this.getLieuxPostes()
-    }
+// on récupère les lieux postes par le user
+const getPostedPlaces = () => {
+    axios.post("/api/lieus/getplacesbyuser", null, {
+        params: {
+            user_id: userStore.id
+        }
+    })
+        .then(response => userStore.storeUserPlaces(response.data.data))
+        .catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
+            alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
+        })
 }
+
+onBeforeMount(() => {
+    // on récupère les lieux postés par l'utilisateur
+    getPostedPlaces()
+})
 </script>

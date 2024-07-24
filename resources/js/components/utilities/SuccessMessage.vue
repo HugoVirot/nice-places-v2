@@ -3,39 +3,36 @@
     <div class="container-fluid greenBackground text-center py-5 my-5 text-white">
         <h3 class="p-2">Félicitations</h3>
         <i class="fa-solid fa-circle-check fa-5x p-2"></i>
-        <h2 class="p-2">{{ message !== 'undefined' ? message : 'succès'}}</h2>
+        <h2 class="p-2">{{ message !== 'undefined' ? message : 'succès' }}</h2>
     </div>
 
 </template>
 
-<script>
-export default {
+<script setup>
+import { useRouter } from "vue-router"
 
-    data() {
-        return {
-            nextPage: "/" + this.$route.params.nextpage,
-            message: this.$route.params.message,
-            lieuId: this.$route.params.lieuid
+const router = useRouter()
+const nextPage = ref("/" + this.$route.params.nextpage)
+const message = ref("/" + this.$route.params.message)
+const placeId = ref("/" + this.$route.params.placeId)
+
+onMounted(() => {
+    // selon le choix fait page précédente, on redirige sur page précédente / accueil / autre page
+    setTimeout(() => {
+        if (nextPage.value == "/lastpage") {
+            router.go('-1')
         }
-    },
-    mounted() {
-        // selon le choix fait page précédente, on redirige sur page précédente / accueil / autre page
-        setTimeout(() => {
-            if (this.nextPage == "/lastpage") {
-                this.$router.go('-1')
-            }
-            else if (this.nextPage == "/home") {
-                this.$router.push('/')
-            }
-            else if (this.nextPage == '/uploadimages') {
-                let route = '/uploadimages/' + this.lieuId
-                this.$router.push(route)
-            } else {
-                this.$router.push(this.nextPage)
-            }
-        }, 2500)
-    }
-}
+        else if (nextPage == "/home") {
+            router.push('/')
+        }
+        else if (nextPage == '/uploadimages') {
+            let route = '/uploadimages/' + placeId
+            router.push(route)
+        } else {
+            router.push(nextPage)
+        }
+    }, 2500)
+})
 </script>
 
 <style scoped>

@@ -5,15 +5,15 @@
             <h1 class="mt-2">Top 100 des lieux</h1>
         </div>
 
-        <Filtres :lieux="topLieux" :lieuxNonFiltres="topLieuxNonFiltres" @filtre_applique="updateLieux" />
+        <Filtres :places="topPlaces" :unfilteredPlaces="topUnfilteredPlaces" @filterApplied="updatePlaces" />
 
         <div class="container-fluid p-3 p-lg-5">
 
             <div v-if="topLieux" class="row">
 
-                <div v-if="topLieux.length > 0" class="col-lg-6 border border-3 border-white textWithShadow"
-                    v-for="(topLieu, index) in topLieux" :key="topLieu.id">
-                    <RectangleLieu :lieu="topLieu" :index="index" />
+                <div v-if="topPlaces.length > 0" class="col-lg-6 border border-3 border-white textWithShadow"
+                    v-for="(topPlace, index) in topPlaces" :key="topLieu.id">
+                    <PlaceCard :place="topPlace" :index="index" />
                 </div>
 
                 <div v-else>
@@ -30,40 +30,27 @@
     </section>
 </template>
 
-<script>
-import { mapWritableState } from 'pinia'
+<script setup>
 import Filtres from "../utilities/Filtres.vue"
-import { useLieuxStore } from '../../stores/lieuxStore'
-import RectangleLieu from '../utilities/RectangleLieu.vue'
+import PlaceCard from '../utilities/PlaceCard.vue'
+import { usePlacesStore } from '../../stores/placesStore';
+import { onBeforeMount } from "vue";
 
-export default {
+const placesStore = usePlacesStore()
 
-    computed: {
-        ...mapWritableState(useLieuxStore, ['getTopRatedPlaces']),
-    },
+const topPlaces = ref('')
+const topUnfilteredPlaces = ref('')
 
-    data() {
-        return {
-            topLieux: '',
-            topLieuxNonFiltres: ''
-        }
-    },
-
-    components: { Filtres, RectangleLieu },
-
-    methods: {
-        updateLieux(lieuxTries) {  // déclenchée si filtre appliqué via composant enfant Filtres
-            this.topLieux = lieuxTries // on remplace le classement affiché par les lieux filtrés 
-        }
-    },
-
-    created() {
-        // on appelle le getter getTopRatedPlaces pour récupérer les 100 lieux les mieux notés
-        // on les stocke dans la variable toplieux des datas
-        this.topLieux = this.getTopRatedPlaces
-        // on garde une copie de cette liste des 100 lieux les mieux notés en cas de retour
-        // à l'affichage normal après avoir effectué un ou plusieurs tris
-        this.topLieuxNonFiltres = this.topLieux
-    }
+const updatePlaces = sortedPlaces => {  // déclenchée si filtre appliqué via composant enfant Filtres
+    topPlaces.value = sortedPlaces // on remplace le classement affiché par les lieux filtrés 
 }
+
+onBeforeMount(() => {
+    // on appelle le getter getTopRatedPlaces pour récupérer les 100 lieux les mieux notés
+    // on les stocke dans la variable toplieux des datas
+    topPlaces = placesStore.getTopRatedPlaces
+    // on garde une copie de cette liste des 100 lieux les mieux notés en cas de retour
+    // à l'affichage normal après avoir effectué un ou plusieurs tris
+    topUnfilteredPlaces = this.topPlaces
+})
 </script>

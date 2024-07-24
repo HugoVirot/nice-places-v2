@@ -52,67 +52,53 @@
     </div>
 </template>
 
-<script>
+<script setup>
 import axios from 'axios'
 import ValidationErrors from "../utilities/ValidationErrors.vue"
 import { mapActions, mapState } from 'pinia'
 import { useUserStore } from '../../stores/userStore'
 
-export default {
+const email = ref("")
+const password = ref("")
+const validationErrors = ref("")
 
-    data() {
-        return {
-            email: "",
-            password: "",
-            validationErrors: ""
-        }
-    },
+const userStore = useUserStore()
 
-    computed: {
-        ...mapState(useUserStore, ['id']),
-    },
+const logIn = () => {
+    // on initialise la protection CSRF Sanctum via cette route
+    axios.get('/sanctum/csrf-cookie')
 
-    components: { ValidationErrors },
-
-    methods: {
-        ...mapActions(useUserStore, ['storeUserData', 'storeNotifications']),
-
-        logIn() {
-            // on initialise la protection CSRF Sanctum via cette route
-            axios.get('/sanctum/csrf-cookie')
-
-                .then(() => {
-                    // on tente la connexion
-                    axios.post('/api/login', { email: this.email, password: this.password })
-                        .then(response => {
-                            // si elle réussit : stockage des données utilisateur reçues dans le localstorage via le userStore
-                            this.storeUserData(response.data.data) 
-                            // récupération des notifications de l'utilisateur qu'on stocke également dans le userStore
-                            this.getNotifications()  
-                            // redirection vers un composant affichant le message de succès "vous êtes connecté"             
-                            this.$router.push('/successmessage/home/' + response.data.message)
-                        // si elle échoue : on affiche la ou les erreurs rencontrée(s)
-                        }).catch((error) => {
-                            this.validationErrors = error.response.data.errors
-                        })
-
-                // si la requête d'initialisation de la protection CSRF a échoué, on affiche ce message
-                }).catch(() => {
-                    alert("Problème d'authentification'. Merci de recharger la page. Réessayez plus tard ou contactez l'administrateur si le problème persiste.")
-                })
-        },
-
-        getNotifications() {
-            axios.get('/api/getnotificationsbyuser/' + this.id)
+        .then(() => {
+            // on tente la connexion
+            axios.post('/api/login', { email: email.value, password: password.value })
                 .then(response => {
-                    // on ne stocke les notifications de l'utilisateur que s'il en possède
-                    if (response.data.length > 0) { this.storeNotifications(response.data) }
-                }).catch(() => {
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
+                    // si elle réussit : stockage des données utilisateur reçues dans le localstorage via le userStore
+                    userStore.storeUserData(response.data.data)
+                    // récupération des notifications de l'utilisateur qu'on stocke également dans le userStore
+                    userStore.getNotifications()
+                    // redirection vers un composant affichant le message de succès "vous êtes connecté"             
+                    this.$router.push('/successmessage/home/' + response.data.message)
+                    // si elle échoue : on affiche la ou les erreurs rencontrée(s)
+                }).catch((error) => {
+                    validationErrors.value = error.response.data.errors
                 })
-        },
-    },
+
+            // si la requête d'initialisation de la protection CSRF a échoué, on affiche ce message
+        }).catch(() => {
+            alert("Problème d'authentification'. Merci de recharger la page. Réessayez plus tard ou contactez l'administrateur si le problème persiste.")
+        })
 }
+
+const getNotifications = () => {
+    axios.get('/api/getnotificationsbyuser/' + userStore.id)
+        .then(response => {
+            // on ne stocke les notifications de l'utilisateur que s'il en possède
+            if (response.data.length > 0) { userStore.storeNotifications(response.data) }
+        }).catch(() => {
+            alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
+        })
+}
+
 </script>
 
 <style scoped>

@@ -8,11 +8,6 @@
     </footer>
 </template>
 
-<script>
-export default {
-}
-</script>
-
 <style scoped>
 a:hover {
     color: white !important

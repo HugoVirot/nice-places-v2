@@ -37,7 +37,7 @@ const routes = [
   },
   {
     path: "/connexion",
-    component: () => import('./components/user/Connexion')
+    component: () => import('./components/user/Connection')
   },
   {
     path: "/moncompte",

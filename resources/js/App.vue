@@ -1,170 +1,141 @@
-<script>
+<script setup>
 import Header from "./template/Header.vue"
 import Slider from "./utilities/Slider.vue"
 import Map from "./utilities/Map.vue"
 import Footer from "./template/Footer.vue"
-import { useLieuxStore } from '../stores/lieuxStore'
 import { useUserStore } from '../stores/userStore'
-import { mapState } from "pinia"
-import { mapActions } from 'pinia'
+import { placesStore } from '../stores/placesStore'
 import axios from "axios"
+import { onBeforeMount, onMounted } from "vue"
 
-export default {
+const userStore = useUserStore()
+const placesStore = usePlacesStore()
 
-	// la syntaxe computed + mapstate permet de se connecter aux variables du state 
-	// => mise à jour automatique au niveau du composant si une de ces variables du state change
-	computed: {
-		...mapState(useLieuxStore, [
-			'lieux',
-			'categories',
-			'departments',
-			'regions',
-			'threeTopPlaces',
-			'threeLastPlaces',
-			'getValidatedPlaces'
-		]),
+// on surveille le choix d'un département ou le changement de département de l'utilisateur
+// si c'est le cas => on récupère les 3 derniers places et les 3 mieux notés du nouveau département
+watch(userStore.department, () => getThreeTopAndLastPlaces())
 
-		...mapState(useUserStore, [
-			'favoris',
-			'userPosition',
-			'department',
-			'id'])
-	},
+// on surveille également le changement d'id et donc d'utilisateur
+watch(userStore.id, () => getThreeTopAndLastPlaces())
 
-	// on surveille le choix d'un département ou le changement de département de l'utilisateur
-	// si c'est le cas => on récupère les 3 derniers lieux et les 3 mieux notés du nouveau département
-	watch: {
-		department() {
-			this.getThreeTopAndLastPlaces()
-		},
-		id() { // on surveille également le changement d'id et donc d'utilisateur
-			this.getThreeTopAndLastPlaces()
-		},
-		lieux() { // et les lieux (permet de récupérer les 3 derniers lieux / 3 top lieux au 1er chargement de App)
-			this.getThreeTopAndLastPlaces()
-		}
-	},
+// et les lieux (permet de récupérer les 3 derniers lieux / 3 top lieux au 1er chargement de App)
+watch(placesStore.places, () => getThreeTopAndLastPlaces())
 
-	methods: {
-		...mapActions(useLieuxStore, [
-			'storeCategories', 'storeLieux', 'storeDepartements', 'storeRegions', 'storeThreeTopPlaces', 'storeThreeLastPlaces']),
 
-		...mapActions(useUserStore, ['storeFavoris']),
-
-		// on récupère les catégories et on les stocke dans le store, idem ensuite pour lieux/départements/régions/favoris
-		getCategories() {
-			axios.get("/api/categories")
-				.then(response => {
-					this.storeCategories(response.data.data)
-				}).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-					alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-				})
-		},
-
-		getLieux() {
-			axios.get("/api/lieus")
-				.then(response => {
-					this.storeLieux(response.data.data)
-				}).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-					alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-				})
-		},
-
-		getDepartements() {
-			axios.get("/api/departments")
-				.then(response => {
-					this.storeDepartements(response.data.data)
-				}).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-					alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-				})
-		},
-
-		getRegions() {
-			axios.get("/api/regions")
-				.then(response => {
-					this.storeRegions(response.data.data)
-				}).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-					alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-				})
-		},
-
-		getFavoris() {
-			axios.get("/api/favoris/" + this.id)
-				.then(response => {
-					this.storeFavoris(response.data.data)
-				}).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-					alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-				})
-		},
-
-		// ***************** on récupère les 3 endroits les mieux notés + les 3 derniers postés ****************
-		getThreeTopAndLastPlaces() {
-
-			let listeLieuxFiltres
-
-			// si l'utilisateur a choisi un département
-			if (this.department) {
-				// on filtre l'ensemble des lieux pour ne garder que ceux du département de l'utilisateur
-				listeLieuxFiltres = this.lieux.filter(lieu => lieu.department.id == this.department.id)
-
-				//sinon => on cible la France entière
-			} else {
-				listeLieuxFiltres = this.lieux
-			}
-
-			// on trie les lieux par note et on garde les 3 mieux notés, puis on les stocke dans le store
-			let troisTopLieux = listeLieuxFiltres.sort((a, b) => {
-				if (a.note > b.note) return -1;
-				return a.note < b.note ? 1 : 0;
-			}).slice(0, 3)
-
-			this.storeThreeTopPlaces(troisTopLieux)
-
-			// idem pour les 3 derniers postés
-			let troisDerniersLieux = listeLieuxFiltres.sort((a, b) => {
-				if (a.created_at > b.created_at) return -1;
-				return a.created_at < b.created_at ? 1 : 0;
-			}).slice(0, 3)
-
-			this.storeThreeLastPlaces(troisDerniersLieux)
-		}
-	},
-
-	created() {
-
-		// on récupère les cat / lieux / dep / régions et on les stocke dans le store
-		// getLieux est nécessaire à chaque affichage du composant pour actualiser la liste
-		// (les autres changent rarement surtout départements et régions)
-		this.getLieux()
-
-		if (!this.categories) {
-			this.getCategories()
-		}
-
-		if (!this.departments) {
-			this.getDepartements()
-		}
-
-		if (!this.regions) {
-			this.getRegions()
-		}
-	},
-
-	mounted() {
-
-		// ******************* si département choisi (à l'inscription ou après) ************************
-
-		// on récupère les 3 derniers lieux ajoutés + les 3 les mieux notés du dép.
-		// on fait cela dans mounted pour être sûr que les lieux soient disponibles (sinon erreur)
-		// par défaut, s'effectue 1 seule fois par session car App est chargé au début (composant principal)
-		// le watch plus haut permet de surveiller les éventuels changements de département et d'actualiser ces deux "top 3"
-		if (this.lieux) {
-			this.getThreeTopAndLastPlaces()
-		}
-	},
-
-	components: { Header, Slider, Map, Footer }
+// on récupère les catégories et on les stocke dans le store, idem ensuite pour places/départements/régions/favoris
+const getCategories = () => {
+	axios.get("/api/categories")
+		.then(response => {
+			placesStore.storeCategories(response.data.data)
+		}).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
+			alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
+		})
 }
+
+const getPlaces = () => {
+	axios.get("/api/places")
+		.then(response => {
+			placesStore.storeLieux(response.data.data)
+		}).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
+			alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
+		})
+}
+
+const getDepartments = () => {
+	axios.get("/api/departments")
+		.then(response => {
+			placesStore.storeDepartments(response.data.data)
+		}).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
+			alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
+		})
+}
+
+const getRegions = () => {
+	axios.get("/api/regions")
+		.then(response => {
+			placesStore.storeRegions(response.data.data)
+		}).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
+			alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
+		})
+}
+
+const getFavorites = () => {
+	axios.get("/api/favoris/" + userStore.id)
+		.then(response => {
+			userStore.storeFavoris(response.data.data)
+		}).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
+			alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
+		})
+}
+
+// ***************** on récupère les 3 endroits les mieux notés + les 3 derniers postés ****************
+const getThreeTopAndLastPlaces = () => {
+
+	let filteredPlacesList
+
+	// si l'utilisateur a choisi un département
+	if (this.department) {
+		// on filtre l'ensemble des places pour ne garder que ceux du département de l'utilisateur
+		filteredPlacesList = this.places.filter(place => place.department.id == this.department.id)
+
+		//sinon => on cible la France entière
+	} else {
+		filteredPlacesList = this.places
+	}
+
+	// on trie les places par note et on garde les 3 mieux notés, puis on les stocke dans le store
+	let threeTopPlaces = filteredPlacesList.sort((a, b) => {
+		if (a.note > b.note) return -1;
+		return a.note < b.note ? 1 : 0;
+	}).slice(0, 3)
+
+	this.storeThreeTopPlaces(threeTopPlaces)
+
+	// idem pour les 3 derniers postés
+	let threeLastPlaces = filteredPlacesList.sort((a, b) => {
+		if (a.created_at > b.created_at) return -1;
+		return a.created_at < b.created_at ? 1 : 0;
+	}).slice(0, 3)
+
+	this.storeThreeLastPlaces(threeLastPlaces)
+}
+
+
+onBeforeMount(() => {
+
+	// on récupère les cat / places / dep / régions et on les stocke dans le store
+	// getPlaces est nécessaire à chaque affichage du composant pour actualiser la liste
+	// (les autres changent rarement surtout départements et régions)
+	getPlaces()
+
+	if (!placesStore.categories) {
+		getCategories()
+	}
+
+	if (!placesStore.departments) {
+		getDepartments()
+	}
+
+	if (!placesStore.regions) {
+		getRegions()
+	}
+	// on récupère également les favoris de l'utilisateur
+	getFavorites()
+})
+
+
+onMounted(() => {
+
+	// ******************* si département choisi (à l'inscription ou après) ************************
+
+	// on récupère les 3 derniers lieux ajoutés + les 3 les mieux notés du dép.
+	// on fait cela dans onMounted pour être sûr que les lieux soient disponibles (sinon erreur)
+	// par défaut, s'effectue 1 seule fois par session car App est chargé au début (composant principal)
+	// le watch plus haut permet de surveiller les éventuels changements de département et d'actualiser ces deux "top 3"
+	if (placesStore.places) {
+		getThreeTopAndLastPlaces()
+	}
+})
 </script>
 
 <template>
@@ -192,7 +163,8 @@ export default {
 			<div class="container-fluid p-5" id="presentation" style="background-image: url(images/mervent2.jpg)">
 				<div class="row pb-4">
 					<div class="col-md-6 my-auto">
-						<img id="bigLogo" class="w-100 h-100 bg-white rounded" src="images/logo.png" alt="logo nice places">
+						<img id="bigLogo" class="w-100 h-100 bg-white rounded" src="images/logo.png"
+							alt="logo nice places">
 					</div>
 
 					<div class="col-md-6 my-auto">
@@ -231,13 +203,13 @@ export default {
 
 				<div class="row m-1 p-1" id="categories">
 
-					<!-- ********************** boucle qui affiche les 3 catégories avec le + de lieux ************************* -->
+					<!-- ********************** boucle qui affiche les 3 catégories avec le + de places ************************* -->
 
 					<div v-for="(category, index) in categories.slice(0, 3)" :key="category.id"
 						class="mx-auto col-md-6 col-lg-4 p-5 border border-white" :style="`background-image: url(/images/categorie${category.id}.jpg); 
 													background-position: center; background-size: cover;`">
 
-						<p class="fs-2 m-auto text-white textWithShadow p-5">{{ category.nom }}</p>
+						<p class="fs-2 m-auto text-white textWithShadow p-5">{{ category.name }}</p>
 
 						<router-link :to="`/categories/${category.id}`"><button
 								class="btn btn-lg greenButton rounded-pill mt-2">voir les lieux</button>
@@ -265,13 +237,13 @@ export default {
 
 				<div class="container-fluid">
 
-					<div class="row m-1 p-1" id="toplieux">
+					<div class="row m-1 p-1" id="topplaces">
 
-						<!-- ********************** boucle qui affiche les 3 lieux ************************* -->
+						<!-- ********************** boucle qui affiche les 3 places ************************* -->
 
 						<div v-for="(topPlace, index) in threeTopPlaces"
 							class="mx-auto col-md-6 col-lg-4 p-2 border border-white d-flex flex-column justify-content-between"
-							:style="`background-image: url(images/${topPlace.image_mise_en_avant[0] ? topPlace.image_mise_en_avant[0].nom : 'defaultpicture.jpg'
+							:style="`background-image: url(images/${topPlace.cover_image[0] ? topPlace.cover_image[0].name : 'defaultpicture.jpg'
 								}); background-position: center; background-size: cover;`">
 							<div class="infosTopLieux pt-1 pb-3">
 
@@ -280,7 +252,7 @@ export default {
 										<span class="ranking"> #{{ index + 1 }} </span>
 									</div>
 									<div class="col-10">
-										<h5>{{ topPlace.nom }}</h5>
+										<h5>{{ topPlace.name }}</h5>
 									</div>
 								</div>
 
@@ -288,26 +260,26 @@ export default {
 									<div class="col-6">
 										<i class="yellowStar fa-2x fa-solid fa-star me-1"></i> {{ topPlace.note }}
 										<span class="fs-4 rounded-circle border border-white p-2 ms-2"
-											v-html="topPlace.categorie.icone"></span>
+											v-html="topPlace.category.icone"></span>
 									</div>
 									<div class="col-6 d-flex">
 										<i class="greenIcon fa-2x fa-solid fa-location-dot me-2"></i>
-										<p class="text-white my-auto">{{ topPlace.ville }} ({{
-											topPlace.code_postal.substr(0, 2)
+										<p class="text-white my-auto">{{ topPlace.city }} ({{
+											topPlace.postcode.substr(0, 2)
 										}})</p>
 									</div>
 								</div>
 
 							</div>
 
-							<router-link :to="`/lieu/${topPlace.id}`"><button
+							<router-link :to="`/place/${topPlace.id}`"><button
 									class="btn btn-lg greenButton rounded-pill">découvrir</button></router-link>
 
 						</div>
 
 					</div>
 
-					<router-link to="/toplieux"><button class="btn btn-lg blueButton mt-3 rounded-pill">Classement
+					<router-link to="/topplaces"><button class="btn btn-lg blueButton mt-3 rounded-pill">Classement
 							complet</button>
 					</router-link>
 
@@ -320,28 +292,28 @@ export default {
 			<div v-if="threeLastPlaces && threeLastPlaces.length > 2">
 
 				<i class="greenIcon mt-5 mx-auto fa-3x fa-solid fa-clock"></i>
-				<h2 v-if="department" class="fs-2 m-3"> Derniers lieux ajoutés dans votre département</h2>
-				<h2 v-else class="fs-2 m-3"> Derniers lieux ajoutés (France entière)</h2>
+				<h2 v-if="department" class="fs-2 m-3"> Derniers places ajoutés dans votre département</h2>
+				<h2 v-else class="fs-2 m-3"> Derniers places ajoutés (France entière)</h2>
 
 				<div class="container-fluid">
 
-					<div class="row m-1 p-1" id="dernierslieux">
+					<div class="row m-1 p-1" id="derniersplaces">
 
-						<!-- ********************** boucle qui affiche les 3 derniers lieux ************************* -->
+						<!-- ********************** boucle qui affiche les 3 derniers places ************************* -->
 
 						<div v-for="lastPlace in threeLastPlaces"
 							class="mx-auto col-md-6 col-lg-4 p-2 border border-white d-flex flex-column justify-content-between"
-							:style="`background-image: url(images/${lastPlace.image_mise_en_avant[0] ? lastPlace.image_mise_en_avant[0].nom : 'defaultpicture.jpg'
+							:style="`background-image: url(images/${lastPlace.image_mise_en_avant[0] ? lastPlace.image_mise_en_avant[0].name : 'defaultpicture.jpg'
 								}); background-position: center; background-size: cover;`">
 							<div class="infosDerniersLieux pt-2 px-1">
 
 								<div class="row">
 									<div class="col-2">
 										<span class="fs-4 rounded-circle border border-white p-1 ms-2"
-											v-html="lastPlace.categorie.icone"></span>
+											v-html="lastPlace.category.icone"></span>
 									</div>
 									<div class="col-10">
-										<h5>{{ lastPlace.nom }}</h5>
+										<h5>{{ lastPlace.name }}</h5>
 									</div>
 								</div>
 
@@ -353,20 +325,20 @@ export default {
 										</div>
 
 										<div class="col-9">
-											<p class="text-white">{{ lastPlace.ville }} ({{
-												lastPlace.code_postal.substr(0, 2) }})</p>
+											<p class="text-white">{{ lastPlace.city }} ({{
+												lastPlace.postcode.substr(0, 2) }})</p>
 										</div>
 
 									</div>
 
-									<div class="row col-md-8" v-if="lastPlace.ville.length < 15">
+									<div class="row col-md-8" v-if="lastPlace.city.length < 15">
 
 										<div class="col-3">
 											<i class="greenIcon fa-2x fa-solid fa-user"></i>
 										</div>
 
 										<div class="col-9" v-if="lastPlace.user">
-											<p class="text-white">par {{ lastPlace.user.pseudo }}</p>
+											<p class="text-white">par {{ lastPlace.user.name }}</p>
 										</div>
 									</div>
 
@@ -374,7 +346,7 @@ export default {
 
 							</div>
 
-							<router-link :to="`/lieu/${lastPlace.id}`"><button
+							<router-link :to="`/place/${lastPlace.id}`"><button
 									class="btn btn-lg greenButton rounded-pill">découvrir</button></router-link>
 
 						</div>
@@ -382,7 +354,7 @@ export default {
 					</div>
 				</div>
 
-				<router-link to="/proposerlieu"><button class="btn btn-lg blueButton mt-3 rounded-pill">Proposer un
+				<router-link to="/proposerplace"><button class="btn btn-lg blueButton mt-3 rounded-pill">Proposer un
 						lieu</button>
 				</router-link>
 
@@ -567,10 +539,10 @@ p {
 	height: 55vh
 }
 
-/******************* sections lieux ************/
+/******************* sections places ************/
 
-#toplieux,
-#dernierslieux {
+#topplaces,
+#derniersplaces {
 	height: 50vh;
 	color: white
 }
@@ -597,15 +569,15 @@ p {
 /********* MEDIA QUERIES (principalement pour l'accueil) ********/
 
 @media screen and (max-width: 380px) {
-	#toplieux .rounded-circle {
+	#topplaces .rounded-circle {
 		display: none;
 	}
 }
 
 @media screen and (max-width: 580px) {
 
-	#toplieux,
-	#dernierslieux {
+	#topplaces,
+	#derniersplaces {
 		height: 120vh;
 	}
 
@@ -631,8 +603,8 @@ p {
 
 @media screen and (min-width: 581px) and (max-width: 768px) {
 
-	#toplieux,
-	#dernierslieux {
+	#topplaces,
+	#derniersplaces {
 		height: 85vh;
 	}
 
@@ -651,8 +623,8 @@ p {
 
 @media screen and (min-width: 769px) and (max-width: 992px) {
 
-	#toplieux,
-	#dernierslieux {
+	#topplaces,
+	#derniersplaces {
 		height: 60vh;
 	}
 }

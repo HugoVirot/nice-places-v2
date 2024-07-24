@@ -83,7 +83,7 @@
     </div>
 </template>
 
-<script>
+<script setup>
 import axios from 'axios'
 import ValidationErrors from "../utilities/ValidationErrors.vue"
 import { useUserStore } from "../../stores/userStore.js";

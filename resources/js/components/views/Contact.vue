@@ -63,50 +63,37 @@
     </div>
 </template>
 
-<script>
+<script setup>
 
 import { useUserStore } from "../../stores/userStore"
 import ValidationErrors from "../utilities/ValidationErrors.vue"
-import { mapState } from 'pinia';
+import { useRouter } from "vue-router"
 
-export default {
+const userStore = useUserStore()
+cons router = useRouter()
+const name = ref('')
+const email = ref('')
+const message = ref('')
+const validationErrors = ref('')
 
-    data() {
-        return {
-            nom: "",
-            email: "",
-            message: "",
-            validationErrors: ""
-        }
-    },
+defineProps(['place_id'])
 
-    computed: {
-        ...mapState(useUserStore, ['id', 'pseudo']),
-    },
+const sendData = () => {
 
-    props: ['lieu_id'],
+    let titreMessage
 
-    components: { ValidationErrors },
-
-    methods: {
-        sendData() {
-
-            let titreMessage
-
-            if (this.id) {
-                titreMessage = "Message de " + this.nom + " email : " + this.email + " (pseudo : " + this.pseudo + ")"
-            } else {
-                titreMessage = "Message de " + this.nom + " - " + this.email + " (utilisateur non inscrit ou non connecté)"
-            }
-
-            axios.post('/api/notifications', { titre: titreMessage, message: this.message, lieu_id: null, user_id: 1 })
-                .then((response) => {
-                    this.$router.push('/successmessage/home/' + response.data.message);
-                }).catch((error) => {
-                    this.validationErrors = error.response.data.errors;
-                })
-        },
+    if (userStore.id) {
+        messageTitle = "Message de " + name.value + " email : " + email.value + " (pseudo : " + userStore.name + ")"
+    } else {
+        messageTitle = "Message de " + name.value + " - " + email.value + " (utilisateur non inscrit ou non connecté)"
     }
+
+    axios.post('/api/notifications', { titre: messageTitle, message: message.value, place_id: null, user_id: 1 })
+        .then((response) => {
+            router.push('/successmessage/home/' + response.data.message);
+        }).catch((error) => {
+            validationErrors.value = error.response.data.errors;
+        })
 }
 </script>
 

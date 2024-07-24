@@ -1,6 +1,6 @@
 <template>
 
-    <section class="p-2" v-if="notifications">
+    <section class="p-2" v-if="userStore.notifications">
         <div class="p-3">
             <i class="greenIcon mx-auto fa-3x fa-solid fa-message"></i>
             <h1 class="mt-2">Mes notifications</h1>
@@ -8,13 +8,13 @@
 
         <div class="container">
             <div class="row p-2">
-                <div v-if="notifications.length > 0"
+                <div v-if="userStore.notifications.length > 0"
                     class="greenIcon mx-auto my-5 border border-4 rounded border-secondary col-md-4 offset-md-1 py-5">
                     <i class="fa-5x fa-solid fa-envelope mb-3"></i>
                     <p><span class="fs-1">{{ notifications.length }}</span> notification(s) reçue(s) au total</p>
                 </div>
 
-                <div v-show="notifications.length > 0 && countUnreadNotifications > 0"
+                <div v-show="userStore.notifications.length > 0 && countUnreadNotifications > 0"
                     class="mx-auto my-5 text-danger border border-4 rounded border-danger col-md-4 offset-md-1 py-5">
                     <i class="fa-5x fa-solid fa-bell mb-3"></i>
                     <p><span class="fs-1">{{ countUnreadNotifications }}</span> non lues </p>
@@ -27,7 +27,8 @@
             <button class="btn greenButton" @click="showNotificationReadMessage = false">OK</button>
         </div>
 
-        <div class="container my-2" v-if="notifications.length > 0" v-for="notification in notifications">
+        <div class="container my-2" v-if="userStore.notifications.length > 0"
+            v-for="notification in userStore.notifications">
 
 
             <!-- <p class="text-dark">{{ moment(notification.created_at).format("ddd DD MMM YYYY [à]HH:mm") }}</p> -->
@@ -40,7 +41,7 @@
                             :data-bs-target="`#message${notification.id}`" aria-expanded="false"
                             :aria-controls="`message${notification.id}`">
 
-                            <p class="text-white col-lg-3">reçue le {{ notification.created_at.substring(0, 10)}}</p>
+                            <p class="text-white col-lg-3">reçue le {{ notification.created_at.substring(0, 10) }}</p>
 
                             <h3 class="col-lg-7">{{ notification.titre }}</h3>
 
@@ -67,61 +68,52 @@
     </section>
 </template>
 
-<script>
+<script setup>
 import { useUserStore } from "../../stores/userStore"
 import { mapActions } from "pinia";
 import { mapState } from "pinia";
+import { useRouter } from "vue-router"
+import { onBeforeMount } from "vue";
 
-export default {
-    computed: {
-        ...mapState(useUserStore, ['id', 'notifications', 'countUnreadNotifications']),
-    },
+const userStore = useUserStore()
+const router = useRouter()
+const showFullMessage = ref(false)
+const showNotificationReadMessage = ref(false)
 
-    data() {
-        return {
-            showFullMessage: false,
-            showNotificationReadMessage: false
-        }
-    },
-
-    methods: {
-        // on rend accessible l'action storeNotifications du userStore
-        ...mapActions(useUserStore, ['storeNotifications']),
-
-        // récupérer les notifications de l'utilisateur en fonction de son id
-        getNotifications() {
-            axios.get('/api/getnotificationsbyuser/' + this.id)
-                .then(response => {
-                    this.storeNotifications(response.data);
-                }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-                })
-        },
-
-        // marquer une notification comme lue
-        markNotificationAsRead(notificationId) {
-            axios.put('/api/notifications/' + notificationId)
-                .then(() => {
-                    this.showNotificationReadMessage = true
-                    this.getNotifications()
-                    this.$router.push('/mesnotifications')
-                }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-                })
-        }
-    },
-
-    created() {
-        // on récupère les notifications de l'utilisateur
-        this.getNotifications()
-    }
+// récupérer les notifications de l'utilisateur en fonction de son id
+const getNotifications = () => {
+    axios.get('/api/getnotificationsbyuser/' + userStore.id)
+        .then(response => {
+            userStore.storeNotifications(response.data);
+        }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
+            alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
+        })
 }
+
+// marquer une notification comme lue
+const markNotificationAsRead = notificationId => {
+    axios.put('/api/notifications/' + notificationId)
+        .then(() => {
+            showNotificationReadMessage.value = true
+            getNotifications()
+            router.push('/mesnotifications')
+        }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
+            alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
+        })
+}
+
+onBeforeMount(() => {
+    // on récupère les notifications de l'utilisateur
+    this.getNotifications()
+})
+
 </script>
 
 <style scoped>
 h3 {
     color: white
 }
+
 .accordion-button {
     background-color: #1C6E8C;
 }

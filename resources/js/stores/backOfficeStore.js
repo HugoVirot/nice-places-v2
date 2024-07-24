@@ -6,7 +6,7 @@ export const useBackOfficeStore = defineStore({
 
     state: () => {
         return {
-            avis: "",
+            reviews: "",
             users: "",
             images: ""
         }
@@ -15,8 +15,8 @@ export const useBackOfficeStore = defineStore({
     getters: {},
 
     actions: {
-        storeAvis(avis) {
-            this.avis = avis
+        storeReviews(reviews) {
+            this.reviews = reviews
         },
 
         storeUsers(users) {

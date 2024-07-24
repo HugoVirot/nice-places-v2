@@ -1,14 +1,14 @@
 import { defineStore } from 'pinia'
 
-export const useLieuxStore = defineStore({
+export const usePlacesStore = defineStore({
     // id requis pour connecter le store aux devtools
     id: 'LieuxStore',
 
     state: () => {
         return {
-            lieux: "",
+            places: "",
             categories: "",
-            departements: "",
+            departments: "",
             regions: "",
             threeTopPlaces: "",
             threeLastPlaces: "",
@@ -16,13 +16,13 @@ export const useLieuxStore = defineStore({
     },
 
     getters: {
-        // on récupère les lieux validés uniquement
+        // on récupère les places validés uniquement
         getValidatedPlaces() {
-            return this.lieux.filter(lieu => lieu.statut == "validé")
+            return this.places.filter(place => place.statut == "validé")
         },
-        //on récupère les 100 lieux les mieux notés
+        //on récupère les 100 places les mieux notés
         getTopRatedPlaces() {
-            return this.lieux.slice(0, 100).sort((a, b) => {
+            return this.places.slice(0, 100).sort((a, b) => {
                 if (a.note > b.note) return -1;
                 return a.note < b.note ? 1 : 0;
             });
@@ -30,12 +30,12 @@ export const useLieuxStore = defineStore({
     },
 
     actions: {
-        storeLieux(lieux) {
-            this.lieux = lieux
+        storePlaces(places) {
+            this.places = places
         },
 
-        storeDepartements(departements) {
-            this.departements = departements
+        storeDepartements(departments) {
+            this.departments = departments
         },
 
         storeCategories(categories) {
@@ -58,8 +58,8 @@ export const useLieuxStore = defineStore({
             this.images = images
         },
 
-        storeNewLieu(newLieu) {
-            this.lieux.push(newLieu)
+        storeNewPlace(newPlace) {
+            this.places.push(newPlace)
         }
     },
 

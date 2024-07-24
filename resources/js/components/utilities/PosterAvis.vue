@@ -28,12 +28,12 @@
                             </div>
 
                             <div class="form-group row m-2">
-                                <label for="commentaire" class="col-md-4 col-form-label text-md-right"></label>
+                                <label for="comment" class="col-md-4 col-form-label text-md-right"></label>
 
                                 <div class="col-md-6">
-                                    <textarea v-model="commentaire" id="commentaire" class="form-control"
-                                        name="commentaire" autocomplete="commentaire">
-                                        commentaire (facultatif)</textarea>
+                                    <textarea v-model="comment" id="comment" class="form-control"
+                                        name="comment" autocomplete="comment">
+                                        comment (facultatif)</textarea>
                                 </div>
                             </div>
 
@@ -59,39 +59,22 @@
     </div>
 </template>
 
-<script>
-
+<script setup>
 import { useUserStore } from "../../stores/userStore"
 import ValidationErrors from "./ValidationErrors.vue"
-import { mapState } from 'pinia';
 
-export default {
+const note = ref('')
+const comment = ref('')
+const validationErrors = ref('')
 
-    data() {
-        return {
-            note: "",
-            commentaire: "",
-            validationErrors: ""
-        }
-    },
+defineProps(['place_id'])
 
-    computed: {
-        ...mapState(useUserStore, ['id']),
-    },
-
-    props: ['lieu_id'],
-
-    components: { ValidationErrors },
-
-    methods: {
-        sendData() {
-            axios.post('/api/avis', { note: this.note, commentaire: this.commentaire, lieu_id: this.lieu_id, user_id: this.id })
-                .then((response) => {
-                    this.$router.push('/successmessage/lastpage/' + response.data.message);
-                }).catch((error) => {
-                    this.validationErrors = error.response.data.errors;
-                })
-        },
-    }
+const sendData = () => {
+    axios.post('/api/avis', { note: note.value, comment: comment.value, place_id: place_id.value, user_id: userStore.id })
+        .then((response) => {
+            this.$router.push('/successmessage/lastpage/' + response.data.message);
+        }).catch((error) => {
+            this.validationErrors = error.response.data.errors;
+        })
 }
 </script>

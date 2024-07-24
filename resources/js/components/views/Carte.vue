@@ -9,7 +9,6 @@ import Map from "../utilities/Map.vue"
             <i class="greenIcon mx-auto fa-3x fa-solid fa-map-location-dot"></i>
             <h1 class="mt-2">Carte des lieux</h1>
         </div>
-
         <Map />
     </section>
 </template>

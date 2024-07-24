@@ -3,21 +3,21 @@
     <div class="pt-5 pb-2">
         <i class="mx-auto greenIcon fa-3x fa-solid fa-paper-plane"></i>
         <h1 class="mt-2">Proposer une image</h1>
-        <h2>{{ lieu.nom }}</h2>
+        <h2>{{ place.name }}</h2>
     </div>
 
-    <div class="container my-5" v-if="lieu.images && lieu.images.length > 0">
-        <p class="mb-3">actuellement {{ lieu.images.length }} image(s) pour ce lieu</p>
+    <div class="container my-5" v-if="place.images && place.images.length > 0">
+        <p class="mb-3">actuellement {{ place.images.length }} image(s) pour ce place</p>
 
-        <div class="row my-2" v-if="lieu.images.length == 1">
-            <div v-for="image in lieu.images" class="col-md-10 offset-md-1 my-1">
-                <img class="previousPictures" :src="`/images/${image.nom}`" :alt="`${image.nom}`">
+        <div class="row my-2" v-if="place.images.length == 1">
+            <div v-for="image in place.images" class="col-md-10 offset-md-1 my-1">
+                <img class="previousPictures" :src="`/images/${image.name}`" :alt="`${image.name}`">
             </div>
         </div>
 
         <div class="row my-2" v-else>
-            <div v-for="image in lieu.images" class="col-md-6 my-1">
-                <img class="previousPictures" :src="`/images/${image.nom}`" :alt="`${image.nom}`">
+            <div v-for="image in place.images" class="col-md-6 my-1">
+                <img class="previousPictures" :src="`/images/${image.name}`" :alt="`${image.name}`">
             </div>
         </div>
 
@@ -76,69 +76,57 @@
 
 </template>
 
-<script>
+<script setup>
 import axios from "axios";
 import ValidationErrors from "../utilities/ValidationErrors.vue"
 import { useUserStore } from "../../stores/userStore";
-import { mapState, mapWritableState } from 'pinia';
+import { useRoute, useRouter } from "vue-router";
+import { onBeforeMount } from "vue";
 
-export default {
+const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
 
-    computed: {
-        ...mapState(useUserStore, ['id']),
-        ...mapWritableState(useUserStore, ['validationErrors'])
-    },
+const placeId = route.params.id
+const place = ref('')
+const formData = new FormData()
+const validationErrors = ref([])
 
-    data() {
-        return {
-            lieuId: this.$route.params.id,
-            lieu: '',
-            formData: new FormData()
-        }
-    },
+const onChange = e => {
+    let chosenImage = e.target.files[0]
+    this.formData.append('image', chosenImage)
+},
 
-    components: { ValidationErrors },
+const sendData = () => {
 
-    methods: {
-        onChange(e) {
-            let imageChoisie = e.target.files[0]
-            this.formData.append('image', imageChoisie)
-        },
+    // on ajoute le user id et le place id au formulaire
+    formData.append("user_id", userStore.id);
+    formData.append("place_id", placeId);
 
-        sendData() {
-
-            // on ajoute le user id et le lieu id au formulaire
-            this.formData.append("user_id", this.id);
-            this.formData.append("lieu_id", this.lieuId);
-            this.formData.append("nom_lieu", this.lieu.nom);
-
-            // on envoie le tout à l'api
-            axios.post('/api/images', this.formData, { 'content-type': 'multipart/form-data' })
-                .then((response) => {
-                    let message = response.data.message
-                    // on redirige vers l'accueil
-                    this.$router.push('/successmessagehome/' + message)
-                })
-                .catch((error) => {
-                    this.validationErrors = error.response.data.errors;
-                })
-        }
-    },
-
-    created() {
-        axios.get("/api/lieus/" + this.lieuId)
-            .then(response => {
-                this.lieu = response.data.data
-            })
-            .catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-            })
-    }
+    // on envoie le tout à l'api
+    axios.post('/api/images', formData)
+        .then((response) => {
+            let message = response.data.message
+            // on redirige vers l'accueil
+            router.push('/successmessagehome/' + message)
+        })
+        .catch((error) => {
+            validationErrors.value = error.response.data.errors;
+        })
 }
+
+onBeforeMount(() => {
+    axios.get("/api/places/" + placeId)
+        .then(response => {
+            place.value = response.data.data
+        })
+        .catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
+            alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
+        })
+})
 </script>
 
 <style scoped>
-
 .container-fluid {
     background-image: url(../../../../public/images/lake.jpg);
     background-position: center;

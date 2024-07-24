@@ -424,7 +424,7 @@
 
 </template>
 
-<script>
+<script setup>
 import moment from 'moment';
 import axios from "axios";
 import { mapWritableState } from 'pinia';

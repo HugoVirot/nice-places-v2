@@ -6,18 +6,13 @@
     </div>`
 </template>
 
-<script>
-export default {
+<script setup>
+import { reactive, computed } from 'vue'
+defineProps(['errors'])
 
-    props: ['errors'],
-
-    computed: {
-        validationErrors() {
-            // on récupère les messages d'erreur à l'intérieur de l'objet errors en props
-            let errors = Object.values(this.errors);
-            errors = errors.flat();
-            return errors;
-        }
-    }
-}
+const validationErrors = computed(() => {
+    // on récupère les messages d'erreur à l'intérieur de l'objet errors en props
+    let errors = Object.values(errors);
+    return errors.flat();
+})
 </script>

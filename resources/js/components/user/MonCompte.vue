@@ -30,18 +30,18 @@
 
                             <div class="form-group row m-2">
                                 <p class="mb-2 blueElement mt-2">Département actuel :
-                                    <span v-if="departement" class="fs-5"> {{ departement.nom }} ({{ departement.code
+                                    <span v-if="department" class="fs-5"> {{ department.nom }} ({{ department.code
                                         }})</span>
                                     <span v-else class="fs-5"> aucun</span>
                                 </p>
-                                <label for="departement" class="col-md-4 col-form-label text-md-right">changer de
+                                <label for="department" class="col-md-4 col-form-label text-md-right">changer de
                                     département</label>
 
                                 <div class="col-md-6">
-                                    <select id="departement" v-model="userStore.departement" class="form-select mx-auto"
-                                        aria-label="filtre" autocomplete="departement">
+                                    <select id="department" v-model="userStore.department" class="form-select mx-auto"
+                                        aria-label="filtre" autocomplete="department">
                                         <option value="null">aucun</option>
-                                        <option v-for="department in departements" :value="department">
+                                        <option v-for="department in departments" :value="department">
                                             {{ department.code }} - {{ department.nom }}</option>
                                     </select>
                                 </div>
@@ -265,7 +265,7 @@ const checkPassword = password => {
 // on envoie les modifs pour les sauvegarder en bdd puis on redirige
 const sendData = () => {
     axios.put('/api/users/' + userStore.id, {
-        email: userStore.email, departement_id: userStore.departement.id, oldPassword: oldPassword,
+        email: userStore.email, department_id: userStore.department.id, oldPassword: oldPassword,
         password: password, password_confirmation: password_confirmation
     }).then(response => {
         this.storeUserData(response.data.data)

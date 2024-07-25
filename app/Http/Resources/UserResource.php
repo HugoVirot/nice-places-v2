@@ -17,7 +17,7 @@ class UserResource extends JsonResource
         // On retourne uniquement "name" et "email"
         return [
             "pseudo" => $this->pseudo,
-            "departement" => $this->departement
+            "department" => $this->department
         ];
     }
 }

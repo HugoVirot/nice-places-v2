@@ -1,25 +1,34 @@
 <script setup>
-import Header from "./template/Header.vue"
-import Slider from "./utilities/Slider.vue"
-import Map from "./utilities/Map.vue"
-import Footer from "./template/Footer.vue"
-import { useUserStore } from '../stores/userStore'
-import { placesStore } from '../stores/placesStore'
+import Header from "./components/template/Header.vue"
+import Slider from "./components/utilities/Slider.vue"
+import Map from "./components/utilities/Map.vue"
+import Footer from "./components/template/Footer.vue"
+import { useUserStore } from './stores/userStore'
+import { usePlacesStore } from './stores/placesStore'
 import axios from "axios"
-import { onBeforeMount, onMounted } from "vue"
+import { onBeforeMount, onMounted, watch, ref } from "vue"
+  import { storeToRefs } from 'pinia'
 
 const userStore = useUserStore()
 const placesStore = usePlacesStore()
 
-// on surveille le choix d'un département ou le changement de département de l'utilisateur
-// si c'est le cas => on récupère les 3 derniers places et les 3 mieux notés du nouveau département
-watch(userStore.department, () => getThreeTopAndLastPlaces())
+const { department } = storeToRefs(userStore)
+const { id } = storeToRefs(userStore)
+//const { places } = storeToRefs(placesStore)
 
-// on surveille également le changement d'id et donc d'utilisateur
-watch(userStore.id, () => getThreeTopAndLastPlaces())
+const loading = ref(true)
 
-// et les lieux (permet de récupérer les 3 derniers lieux / 3 top lieux au 1er chargement de App)
-watch(placesStore.places, () => getThreeTopAndLastPlaces())
+// ERREUR WATCH : invalid watch source:  <empty string> A watch source can only be a getter/effect function, a ref, a reactive object, or an array of these types. 
+//at <App>
+// // on surveille le choix d'un département ou le changement de département de l'utilisateur
+// // si c'est le cas => on récupère les 3 derniers places et les 3 mieux notés du nouveau département
+watch(department, () => getThreeTopAndLastPlaces())
+
+// // on surveille également le changement d'id et donc d'utilisateur
+watch(id, () => getThreeTopAndLastPlaces())
+
+// // et les lieux (permet de récupérer les 3 derniers lieux / 3 top lieux au 1er chargement de App)
+//watch(places, () => getThreeTopAndLastPlaces())
 
 
 // on récupère les catégories et on les stocke dans le store, idem ensuite pour places/départements/régions/favoris
@@ -35,7 +44,7 @@ const getCategories = () => {
 const getPlaces = () => {
 	axios.get("/api/places")
 		.then(response => {
-			placesStore.storeLieux(response.data.data)
+			placesStore.storePlaces(response.data.data)
 		}).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
 			alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
 		})
@@ -59,28 +68,19 @@ const getRegions = () => {
 		})
 }
 
-const getFavorites = () => {
-	axios.get("/api/favoris/" + userStore.id)
-		.then(response => {
-			userStore.storeFavoris(response.data.data)
-		}).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-			alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-		})
-}
-
 // ***************** on récupère les 3 endroits les mieux notés + les 3 derniers postés ****************
 const getThreeTopAndLastPlaces = () => {
 
 	let filteredPlacesList
 
 	// si l'utilisateur a choisi un département
-	if (this.department) {
+	if (department) {
 		// on filtre l'ensemble des places pour ne garder que ceux du département de l'utilisateur
-		filteredPlacesList = this.places.filter(place => place.department.id == this.department.id)
+		filteredPlacesList = placesStore.places.filter(place => place.department.id == department.id)
 
 		//sinon => on cible la France entière
 	} else {
-		filteredPlacesList = this.places
+		filteredPlacesList = placesStore.places
 	}
 
 	// on trie les places par note et on garde les 3 mieux notés, puis on les stocke dans le store
@@ -89,7 +89,7 @@ const getThreeTopAndLastPlaces = () => {
 		return a.note < b.note ? 1 : 0;
 	}).slice(0, 3)
 
-	this.storeThreeTopPlaces(threeTopPlaces)
+	placesStore.storeThreeTopPlaces(threeTopPlaces)
 
 	// idem pour les 3 derniers postés
 	let threeLastPlaces = filteredPlacesList.sort((a, b) => {
@@ -97,7 +97,7 @@ const getThreeTopAndLastPlaces = () => {
 		return a.created_at < b.created_at ? 1 : 0;
 	}).slice(0, 3)
 
-	this.storeThreeLastPlaces(threeLastPlaces)
+	placesStore.storeThreeLastPlaces(threeLastPlaces)
 }
 
 
@@ -120,7 +120,9 @@ onBeforeMount(() => {
 		getRegions()
 	}
 	// on récupère également les favoris de l'utilisateur
-	getFavorites()
+	///getFavorites() => erreur : get non accepté au lieu de post ?
+
+	loading.value = false
 })
 
 
@@ -136,6 +138,18 @@ onMounted(() => {
 		getThreeTopAndLastPlaces()
 	}
 })
+
+// onmounted chat gpt
+// onMounted(async () => {
+// 	if (!placesStore.categories) {
+// 		try {
+// 			const response = await axios.get('/api/categories');
+// 			placesStore.storeCategories(response.data.data || []);
+// 		} catch {
+// 			alert('Une erreur s\'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.');
+// 		}
+// 	}
+// });
 </script>
 
 <template>
@@ -160,10 +174,10 @@ onMounted(() => {
 
 			<div id="presentationTopStripe" class="mt-5"></div>
 
-			<div class="container-fluid p-5" id="presentation" style="background-image: url(images/mervent2.jpg)">
+			<div class="container-fluid p-5" id="presentation">
 				<div class="row pb-4">
 					<div class="col-md-6 my-auto">
-						<img id="bigLogo" class="w-100 h-100 bg-white rounded" src="images/logo.png"
+						<img id="bigLogo" class="w-100 h-100 bg-white rounded" src="../../public/images/logo.png"
 							alt="logo nice places">
 					</div>
 
@@ -190,11 +204,11 @@ onMounted(() => {
 
 			<!-- *********************************************** CARTE ************************************************** -->
 
-			<Map />
+			<Map :singlePlace="null" />
 
 			<!-- *********************************************** CATEGORIES ************************************************** -->
 
-			<div class="container-fluid">
+			<div class="container-fluid" v-if="!loading && placesStore.categories">
 
 				<div>
 					<i class="greenIcon mt-5 mx-auto fa-3x fa-solid fa-book-atlas"></i>
@@ -203,11 +217,11 @@ onMounted(() => {
 
 				<div class="row m-1 p-1" id="categories">
 
-					<!-- ********************** boucle qui affiche les 3 catégories avec le + de places ************************* -->
+					<!-- ********************** boucle qui affiche les 3 catégories avec le + de lieux ************************* -->
 
-					<div v-for="(category, index) in categories.slice(0, 3)" :key="category.id"
-						class="mx-auto col-md-6 col-lg-4 p-5 border border-white" :style="`background-image: url(/images/categorie${category.id}.jpg); 
-													background-position: center; background-size: cover;`">
+					<div v-for="(category, index) in placesStore.categories.slice(0, 3)" :key="category.id"
+						class="mx-auto col-md-6 col-lg-4 p-5 border border-white"
+						:style="`background-image: url('images/categorie${category.id}.jpg'); background-position: center; background-size: cover;`">
 
 						<p class="fs-2 m-auto text-white textWithShadow p-5">{{ category.name }}</p>
 
@@ -228,7 +242,7 @@ onMounted(() => {
 
 			<!-- ******************************************* TOP DES LIEUX *********************************************** -->
 
-			<div v-if="threeTopPlaces && threeTopPlaces.length > 2">
+			<div v-if="placesStore.threeTopPlaces && placesStore.threeTopPlaces.length > 2">
 				<div>
 					<i class="greenIcon mt-5 mx-auto fa-3x fa-solid fa-star"></i>
 					<h2 v-if="department" class="fs-2 m-3">Le top des lieux dans votre département</h2>
@@ -241,9 +255,9 @@ onMounted(() => {
 
 						<!-- ********************** boucle qui affiche les 3 places ************************* -->
 
-						<div v-for="(topPlace, index) in threeTopPlaces"
+						<div v-for="(topPlace, index) in placesStore.threeTopPlaces"
 							class="mx-auto col-md-6 col-lg-4 p-2 border border-white d-flex flex-column justify-content-between"
-							:style="`background-image: url(images/${topPlace.cover_image[0] ? topPlace.cover_image[0].name : 'defaultpicture.jpg'
+							:style="`background-image: url(../../public/images/${topPlace.cover_image[0] ? topPlace.cover_image[0].name : 'defaultpicture.jpg'
 								}); background-position: center; background-size: cover;`">
 							<div class="infosTopLieux pt-1 pb-3">
 
@@ -289,7 +303,7 @@ onMounted(() => {
 
 			<!-- ********************************* DERNIERS LIEUX AJOUTES *************************************** -->
 
-			<div v-if="threeLastPlaces && threeLastPlaces.length > 2">
+			<div v-if="placesStore.threeLastPlaces && placesStore.threeLastPlaces.length > 2">
 
 				<i class="greenIcon mt-5 mx-auto fa-3x fa-solid fa-clock"></i>
 				<h2 v-if="department" class="fs-2 m-3"> Derniers places ajoutés dans votre département</h2>
@@ -301,9 +315,9 @@ onMounted(() => {
 
 						<!-- ********************** boucle qui affiche les 3 derniers places ************************* -->
 
-						<div v-for="lastPlace in threeLastPlaces"
+						<div v-for="lastPlace in placesStore.threeLastPlaces"
 							class="mx-auto col-md-6 col-lg-4 p-2 border border-white d-flex flex-column justify-content-between"
-							:style="`background-image: url(images/${lastPlace.image_mise_en_avant[0] ? lastPlace.image_mise_en_avant[0].name : 'defaultpicture.jpg'
+							:style="`background-image: url(../../public/images/${lastPlace.cover_image[0] ? lastPlace.cover_image[0].name : 'defaultpicture.jpg'
 								}); background-position: center; background-size: cover;`">
 							<div class="infosDerniersLieux pt-2 px-1">
 
@@ -370,17 +384,17 @@ onMounted(() => {
 				<div class="container-fluid px-5 mt-4">
 					<div class="row" id="inscrivezVousIcones">
 						<div class="col-md-4 p-1">
-							<img class="inscrivezVousIcones" src="images/icons/france.png" alt="France">
+							<img class="inscrivezVousIcones" src="../../public/images/icons/france.png" alt="France">
 							<p class="fs-4 mt-3">Des lieux dans toute la France</p>
 						</div>
 
 						<div class="col-md-4 p-1">
-							<img id="pointer" src="images/icons/pointer.png" alt="pointeur">
+							<img id="pointer" src="../../public/images/icons/pointer.png" alt="pointeur">
 							<p class="fs-4 mt-3">Partagez vos coins préférés</p>
 						</div>
 
 						<div class="col-md-4 p-1">
-							<img class="inscrivezVousIcones" src="images/icons/phone.png" alt="téléphone">
+							<img class="inscrivezVousIcones" src="../../public/images/icons/phone.png" alt="téléphone">
 							<p class="fs-4 mt-3">Un site web et une appli mobile</p>
 						</div>
 					</div>
@@ -440,6 +454,10 @@ h2 {
 
 #bigLogo {
 	height: 1.7em
+}
+
+#presentation {
+	background-image: url(../../public/images/mervent2.jpg)
 }
 
 /******************* boutons ************/

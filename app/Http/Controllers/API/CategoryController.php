@@ -45,8 +45,8 @@ class CategoryController extends BaseController
         }
 
         // on crée un nouveau lieu
-        $categorie = Category::create($request->all());
-        // $categorie = Category::create([
+        $category = Category::create($request->all());
+        // $category = Category::create([
         //     'nom' => $request->nom,
         //     'icone' => $request->icone,
         //     'couleur' => $request->couleur
@@ -54,13 +54,13 @@ class CategoryController extends BaseController
 
         // On retourne les informations en JSON
         $message = "La catégorie a bien été créée";
-        return $this->sendResponse($categorie, $message, 201);
+        return $this->sendResponse($category, $message, 201);
     }
 
     /**
      * Display the specified resource.
      *
-     * @param  \App\Models\Category  $categorie
+     * @param  \App\Models\Category  $category
      * @return \Illuminate\Http\Response
      */
     public function show(Category $category)
@@ -74,7 +74,7 @@ class CategoryController extends BaseController
      * Update the specified resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Category  $categorie
+     * @param  \App\Models\Category  $category
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, Category $category)
@@ -100,7 +100,7 @@ class CategoryController extends BaseController
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\Models\Category  $categorie
+     * @param  \App\Models\Category  $category
      * @return \Illuminate\Http\Response
      */
     public function destroy(Category $category)

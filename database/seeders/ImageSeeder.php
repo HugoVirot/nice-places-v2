@@ -18,7 +18,7 @@ class ImageSeeder extends Seeder
 
         for ($i = 1; $i < 10; $i++) {
             Image::create([
-                'name' => 'categorie' . $i . '.jpg',
+                'name' => 'category' . $i . '.jpg',
                 'cover' => true,
                 'user_id' => 1,
                 'place_id' => null,

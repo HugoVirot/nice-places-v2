@@ -12,7 +12,7 @@ class Place extends Model
     // chargement automatique des catégories / images / user associés lorsque l'on récupère le lieu
     // les avis ne sont pas inclus car tri par date de publication (le dernier en 1er) nécessaire 
     // => récupération et tri réalisés dans le contrôleur
-    protected $with = ['categorie', 'user', 'image_mise_en_avant', 'departement'];
+    protected $with = ['category', 'user', 'cover_image', 'department'];
 
     public function category()
     {

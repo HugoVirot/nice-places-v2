@@ -9,7 +9,7 @@ class Region extends Model
 {
     use HasFactory;
 
-    public function departements()
+    public function departments()
     {
         return $this->hasMany(Department::class);
     }

@@ -10,16 +10,19 @@
 
 <script setup>
 import { useRouter } from "vue-router"
+import { useRoute } from "vue-router";
+import { onMounted } from 'vue';
 
 const router = useRouter()
-const nextPage = ref("/" + this.$route.params.nextpage)
-const message = ref("/" + this.$route.params.message)
-const placeId = ref("/" + this.$route.params.placeId)
+const route = useRoute()
+const nextPage = "/" + route.params.nextpage
+const message = route.params.message
+const placeId = "/" + route.params.placeId
 
 onMounted(() => {
     // selon le choix fait page précédente, on redirige sur page précédente / accueil / autre page
     setTimeout(() => {
-        if (nextPage.value == "/lastpage") {
+        if (nextPage == "/lastpage") {
             router.go('-1')
         }
         else if (nextPage == "/home") {

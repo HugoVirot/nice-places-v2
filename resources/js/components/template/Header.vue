@@ -7,11 +7,11 @@
 
       <!-- image avec deux bandes (mobiles uniquement) -->
       <img class="d-block mt-3 d-md-none" id="twostripes" alt="bandes colorées header mobile"
-        src="images/bandes-gauche-header.png" />
+        src="../../../../public/images/bandes-gauche-header.png" />
 
       <div class="d-flex flex-column mx-auto text-center">
         <router-link to="/">
-          <img id="logo" alt="logo" src="images/logo.png" />
+          <img id="logo" alt="logo" src="../../../../public/images/logo.png" />
         </router-link>
         <p id="textelogo" class="mx-auto d-none d-md-block">
           <span class="greentext">sorties nature </span>
@@ -103,16 +103,18 @@
 </template>
 
 <script setup>
+import { useRouter } from "vue-router";
 import { useUserStore } from "../../stores/userStore"
 
 const userStore = useUserStore()
+const router = useRouter()
 
 const logOutUser = () => {
   // on réinitialise le store
   userStore.$reset()
 
   // on redirige vers l'accueil
-  this.$router.push("/successmessagehome/Déconnexion réussie")
+  router.push("/successmessagehome/Déconnexion réussie")
 }
 </script>
 

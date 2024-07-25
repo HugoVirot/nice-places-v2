@@ -15,7 +15,7 @@
     </div>
 
     <div class="container-fluid p-3 p-lg-5" :style="`background-image: url(/images/${
-        lieu.image_mise_en_avant && lieu.image_mise_en_avant[0] ? lieu.image_mise_en_avant[0].nom : 'rocks.jpg'
+        lieu.cover_image && lieu.cover_image[0] ? lieu.cover_image[0].nom : 'rocks.jpg'
         }); background-position: center; background-size: cover;`">
 
         <ValidationErrors :errors="validationErrors" v-if="validationErrors" />
@@ -100,7 +100,7 @@
 
                                 <div class="col-md-6">
                                     <select v-model="categorie_id" class="form-select" aria-label="categorie_id">
-                                        <option v-for="categorie in categories" :value="categorie.id">
+                                        <option v-for="categoryin categories" :value="categorie.id">
                                             {{ categorie.nom }}
                                         </option>
                                     </select>
@@ -156,10 +156,10 @@
 
                             <div class="form-group row m-2">
                                 <label class="col-md-4 col-form-label text-md-right"
-                                    for="departement_id">département</label>
-                                <select id="departement_id" required v-model="departement_id" class="form-select w-50"
-                                    aria-label="filtre" autocomplete="departement_id">
-                                    <option v-for="department in departements" :value="department.id">
+                                    for="department_id">département</label>
+                                <select id="department_id" required v-model="department_id" class="form-select w-50"
+                                    aria-label="filtre" autocomplete="department_id">
+                                    <option v-for="department in departments" :value="department.id">
                                         {{ department.code }} - {{ department.nom }}</option>
                                 </select>
                             </div>
@@ -221,7 +221,7 @@ export default {
 
     computed: {
         ...mapState(useUserStore, ['role']),
-        ...mapState(useLieuxStore, ['categories', 'departements']),
+        ...mapState(useLieuxStore, ['categories', 'departments']),
         ...mapWritableState(useLieuxStore, ['lieux'])
     },
 
@@ -238,7 +238,7 @@ export default {
             temps: "",
             difficulte: "",
             kilometres: "",
-            departement_id: "",
+            department_id: "",
             adresse: "",
             code_postal: "",
             ville: "",
@@ -267,7 +267,7 @@ export default {
             this.temps = lieu.temps
             this.difficulte = lieu.difficulte
             this.kilometres = lieu.kilometres
-            this.departement_id = lieu.departement_id
+            this.department_id = lieu.department_id
             this.adresse = lieu.adresse
             this.code_postal = lieu.code_postal
             this.ville = lieu.ville
@@ -278,7 +278,7 @@ export default {
 
         saveChanges() {
             // on sauvegarde les changements dans la base de données
-            axios.put('/api/lieus/' + this.lieu.id, {
+            axios.put('/api/places/' + this.lieu.id, {
                 nom: this.nom,
                 description: this.description,
                 latitude: this.latitude,
@@ -288,7 +288,7 @@ export default {
                 temps: this.temps,
                 difficulte: this.difficulte,
                 kilometres: this.kilometres,
-                departement_id: this.departement_id,
+                department_id: this.department_id,
                 adresse: this.adresse,
                 code_postal: this.code_postal,
                 ville: this.ville,
@@ -372,7 +372,7 @@ export default {
 
     created() {
 
-        axios.get("/api/lieus/" + this.lieuId)
+        axios.get("/api/places/" + this.lieuId)
             .then(response => {
                 this.updateLocalData(response.data.data)
             }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API

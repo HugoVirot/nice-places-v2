@@ -1,4 +1,4 @@
-require('./bootstrap');
+import './bootstrap';
 
 // on importe Bootstrap
 import "bootstrap/dist/css/bootstrap.min.css"

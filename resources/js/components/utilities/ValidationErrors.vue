@@ -7,12 +7,12 @@
 </template>
 
 <script setup>
-import { reactive, computed } from 'vue'
-defineProps(['errors'])
+import { computed } from 'vue'
+const props = defineProps(['errors'])
 
 const validationErrors = computed(() => {
     // on récupère les messages d'erreur à l'intérieur de l'objet errors en props
-    let errors = Object.values(errors);
+    let errors = Object.values(props.errors);
     return errors.flat();
 })
 </script>

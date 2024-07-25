@@ -264,12 +264,12 @@ const showFullComment = ref(false)
 const loading = ref(null)
 
 const addToFavorites = () => {
-    axios.post('/api/favoris', { place_id: placeId.value, user_id: userStore.id })
+    axios.post('/api/favorites', { place_id: placeId.value, user_id: userStore.id })
 
         .then(response => {
             let message = response.data.message
 
-            axios.get('/api/favoris/' + userStore.id)
+            axios.get('/api/favorites/' + userStore.id)
 
                 .then(response => {
                     userStore.storeFavoris(response.data.data)
@@ -283,12 +283,12 @@ const addToFavorites = () => {
 },
 
 const removeToFavorites = () => {
-    axios.delete('/api/favoris/' + userStore.id + '/' + placeId)
+    axios.delete('/api/favorites/' + userStore.id + '/' + placeId)
 
         .then(response => {
             let message = response.data.message
 
-            axios.get('/api/favoris/' + userStore.id)
+            axios.get('/api/favorites/' + userStore.id)
 
                 .then(response => {
                     userStore.storeFavorites(response.data.data)

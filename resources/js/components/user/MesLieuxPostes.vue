@@ -35,7 +35,7 @@ const store = useUserStore()
 
 // on récupère les lieux postes par le user
 const getPostedPlaces = () => {
-    axios.post("/api/lieus/getplacesbyuser", null, {
+    axios.post("/api/places/getplacesbyuser", null, {
         params: {
             user_id: userStore.id
         }

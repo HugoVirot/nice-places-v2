@@ -49,14 +49,14 @@
                             </div>
 
                             <div class="form-group row m-2">
-                                <label for="departement" class="col-md-4 col-form-label text-md-right">département
+                                <label for="department" class="col-md-4 col-form-label text-md-right">département
                                     (facultatif)</label>
 
                                 <div class="col-md-6">
-                                    <select id="departement" v-model="departement" name="departement"
-                                        class="form-select mx-auto" aria-label="filtre" autocomplete="departement">
-                                        <option v-for="departement in departements" :value="departement.id">
-                                            {{ departement.code }} - {{ departement.nom }}
+                                    <select id="department" v-model="department" name="department"
+                                        class="form-select mx-auto" aria-label="filtre" autocomplete="department">
+                                        <option v-for="department in departments" :value="department.id">
+                                            {{ department.code }} - {{ department.nom }}
                                         </option>
                                     </select>
                                 </div>
@@ -193,7 +193,7 @@ const placesStore = usePlacesStore()
 
 const pseudo = ref('')
 const email = ref('')
-const departement = ref('')
+const department = ref('')
 const password = ref('')
 const password_confirmation = ref('')
 const passwordTyped = ref(false)
@@ -209,7 +209,7 @@ const politique = ref(false)
 const sendData = () => {
 
     axios.post('/api/register', {
-        pseudo: this.pseudo, email: this.email, departement: this.departement,
+        pseudo: this.pseudo, email: this.email, department: this.department,
         password: this.password, password_confirmation: this.password_confirmation
     })
         .then(response => {

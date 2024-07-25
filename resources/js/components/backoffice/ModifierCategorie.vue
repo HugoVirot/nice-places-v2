@@ -8,7 +8,7 @@
 
         <ValidationErrors :errors="validationErrors" v-if="validationErrors" />
 
-        <div v-if="categorie !== '' && role == 'admin'" class="row justify-content-center p-2 p-lg-5">
+        <div v-if="category!== '' && role == 'admin'" class="row justify-content-center p-2 p-lg-5">
             <div class="col-md-8">
                 <div class="card">
                     <div class="card-header text-white mb-3">Entrez les nouvelles informations</div>
@@ -104,7 +104,7 @@ export default {
         // cette fonction permet de mettre à jour les données locales du composant
         // une fois que l'appel API a récupéré la categorie
         updateLocalData(categorie) {
-            this.categorie = categorie
+            this.category= categorie
             this.nom = categorie.nom
             this.icone = categorie.icone
             this.couleur = categorie.couleur
@@ -121,7 +121,7 @@ export default {
 
                     // une fois la catégorie supprimée, on la retire des catégories du store
                     // cela permet d'éviter un appel api
-                    let index = this.categories.findIndex(categorie => categorie.id == id)
+                    let index = this.categories.findIndex(category=> categorie.id == id)
                     this.categories.splice(index, 1)
 
                     // on sauvegarde la nouvelle liste dans le store

@@ -55,14 +55,16 @@
 <script setup>
 import axios from 'axios'
 import ValidationErrors from "../utilities/ValidationErrors.vue"
-import { mapActions, mapState } from 'pinia'
 import { useUserStore } from '../../stores/userStore'
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 const email = ref("")
 const password = ref("")
 const validationErrors = ref("")
 
 const userStore = useUserStore()
+const router = useRouter()
 
 const logIn = () => {
     // on initialise la protection CSRF Sanctum via cette route
@@ -73,13 +75,14 @@ const logIn = () => {
             axios.post('/api/login', { email: email.value, password: password.value })
                 .then(response => {
                     // si elle réussit : stockage des données utilisateur reçues dans le localstorage via le userStore
-                    userStore.storeUserData(response.data.data)
-                    // récupération des notifications de l'utilisateur qu'on stocke également dans le userStore
-                    userStore.getNotifications()
-                    // redirection vers un composant affichant le message de succès "vous êtes connecté"             
-                    this.$router.push('/successmessage/home/' + response.data.message)
-                    // si elle échoue : on affiche la ou les erreurs rencontrée(s)
-                }).catch((error) => {
+                    userStore.storeUserData(response.data.data)  // OK
+                    // // récupération des notifications et favoris de l'utilisateur qu'on stocke également dans le userStore
+                    getNotifications() // OK
+                    getFavorites()
+                    // // redirection vers un composant affichant le message de succès "vous êtes connecté"             
+                    router.push('/successmessage/home/' + response.data.message)
+                    // // si elle échoue : on affiche la ou les erreurs rencontrée(s)
+                }).catch(error => {
                     validationErrors.value = error.response.data.errors
                 })
 
@@ -95,6 +98,15 @@ const getNotifications = () => {
             // on ne stocke les notifications de l'utilisateur que s'il en possède
             if (response.data.length > 0) { userStore.storeNotifications(response.data) }
         }).catch(() => {
+            alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
+        })
+}
+
+const getFavorites = () => {
+    axios.get("/api/favorites/" + userStore.id)
+        .then(response => {
+            userStore.storeFavoris(response.data.data)
+        }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
             alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
         })
 }

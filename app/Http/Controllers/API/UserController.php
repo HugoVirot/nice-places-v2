@@ -79,7 +79,7 @@ class UserController extends BaseController
             'name' => $request->pseudo,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'department_id' => $request->departement
+            'department_id' => $request->department
         ]);
 
         return $this->sendResponse($user, 'Inscription réussie.', 201);

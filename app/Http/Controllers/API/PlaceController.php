@@ -100,7 +100,7 @@ class PlaceController extends BaseController
             'user_id' => $request->user_id,
             // selon le statut de l'utilisateur (admin ou utilisateur standard), on valide ou on met en attente le lieu
             'status' => User::find($request->user_id)->role->name == "admin" ? "validé" : "en attente",
-            'categorie_id' => $request->categorie
+            'category' => $request->category
         ]);
 
         // On retourne la réponse JSON (code 201 = ressource créée avec succès)
@@ -157,12 +157,12 @@ class PlaceController extends BaseController
             'description' => 'required|min:25|max:3000',
             'latitude' => 'required|between:-90,90',
             'longitude' => 'required|between:-180,180',
-            'categorie_id' => 'required|integer',
+            'category_id' => 'required|integer',
             'note' => 'required|min:1|max:10',
             'time' => 'required|integer|min:1|max:24', // temps en heures
             'difficulty' => 'required', // énumération : choix entre "famille", "amateur" et "sportif"
             'kilometres' => 'nullable|integer|min:1|max:100',
-            'departement_id' => 'required|integer',
+            'department_id' => 'required|integer',
             'adresse' => 'required|min:5|max:75',
             'postcode' => 'required|min:5|max:5',
             'city' => 'required|min:3|max:50',

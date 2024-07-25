@@ -124,7 +124,7 @@ export default {
             this.statut = image.statut
 
             if (this.image.lieu_id) {
-                axios.get("/api/lieus/getimagesnumberbyplace/" + this.image.lieu_id)
+                axios.get("/api/places/getimagesnumberbyplace/" + this.image.lieu_id)
                     .then(response => {
                         this.imagesNumberForThisPlace = response.data
                     }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API

@@ -4,7 +4,7 @@
         <div class="carousel-inner">
 
             <div class="carousel-item active">
-                <img src="images/coulon.jpg" class="d-block w-100" alt="marais poitevin">
+                <img src="../../../../public/images/coulon.jpg" class="d-block w-100" alt="marais poitevin">
                 <div class="carousel-caption captionfondbleu d-none d-md-block p-5 mt-auto">
                     <h2>Redécouvrez votre région !</h2>
                     <p>Vous serez étonné(e) par les nombreux lieux extraordinaires qu'elle propose.</p>
@@ -15,7 +15,7 @@
             </div>
 
             <div class="carousel-item">
-                <img src="images/plage-des-chardons.jpg" class="d-block w-100" alt="plage de la Faute">
+                <img src="../../../../public/images/plage-des-chardons.jpg" class="d-block w-100" alt="plage de la Faute">
                 <div class="carousel-caption captionfondbleu d-none d-md-block p-5">
                     <h2>Partagez vos coups de coeur !</h2>
                     <p>Faites profiter la communauté de vos petits coins de paradis.</p>
@@ -27,7 +27,7 @@
             </div>
 
             <div class="carousel-item">
-                <img src="images/mervent.jpg" class="d-block w-100" alt="forêt de Mervent">
+                <img src="../../../../public/images/mervent.jpg" class="d-block w-100" alt="forêt de Mervent">
                 <div class="carousel-caption captionfondbleu d-none d-md-block p-5">
                     <h2>Destination nature !</h2>
                     <p>Il y a toujours une nouvelle sortie sur Nice Places !

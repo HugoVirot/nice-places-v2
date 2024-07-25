@@ -2,16 +2,16 @@ import { defineStore } from 'pinia'
 
 export const usePlacesStore = defineStore({
     // id requis pour connecter le store aux devtools
-    id: 'LieuxStore',
+    id: 'PlacesStore',
 
     state: () => {
         return {
-            places: "",
-            categories: "",
-            departments: "",
-            regions: "",
-            threeTopPlaces: "",
-            threeLastPlaces: "",
+            places: null,
+            categories: null,
+            departments: null,
+            regions: null,
+            threeTopPlaces: null,
+            threeLastPlaces: null
         }
     },
 
@@ -34,7 +34,7 @@ export const usePlacesStore = defineStore({
             this.places = places
         },
 
-        storeDepartements(departments) {
+        storeDepartments(departments) {
             this.departments = departments
         },
 

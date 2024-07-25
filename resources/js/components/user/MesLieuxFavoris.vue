@@ -41,7 +41,7 @@ const unfilteredFavorites = ref([])
 // récupérer les favoris de l'utilisateur
 const getFavorites = () => {
 
-    axios.get('/api/favoris/' + userStore.id)
+    axios.get('/api/favorites/' + userStore.id)
         .then(response => {
             userStore.storeFavorites(response.data.data);
         }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API

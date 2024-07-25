@@ -87,7 +87,7 @@
                 <div class="modal-body">
                     <p>Etes-vous sûr de vouloir supprimer cet élément : {{ elementToDelete }} (id : {{
                     idOfElementToDelete }}) ?</p>
-                    <p v-if="elementToDelete == 'categorie'" class="text-danger">Attention : tous les lieux associés à
+                    <p v-if="elementToDelete == 'category'" class="text-danger">Attention : tous les lieux associés à
                         cette catégorie seront supprimés.</p>
                 </div>
                 <div class="modal-footer">
@@ -186,23 +186,23 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="categorie in categories">
-                        <th scope="row">{{ categorie.id }}</th>
-                        <td>{{ categorie.nom }}</td>
-                        <td><span class="fa-2x iconWithShadow me-2" v-html="categorie.icone"
-                                :style="{color: categorie.couleur}"></span></td>
-                        <td>{{ moment(categorie.created_at).format("ddd DD MMM YYYY [à] HH:mm") }}</td>
-                        <td> {{ categorie.created_at == categorie.updated_at ? "jamais modifiée" :
-                        moment(categorie.updated_at).format("ddd DD MMM YYYY [à] HH:mm")
+                    <tr v-for="category in categories">
+                        <th scope="row">{{ category.id }}</th>
+                        <td>{{ category.nom }}</td>
+                        <td><span class="fa-2x iconWithShadow me-2" v-html="category.icone"
+                                :style="{color: category.couleur}"></span></td>
+                        <td>{{ moment(category.created_at).format("ddd DD MMM YYYY [à] HH:mm") }}</td>
+                        <td> {{ category.created_at == category.updated_at ? "jamais modifiée" :
+                        moment(category.updated_at).format("ddd DD MMM YYYY [à] HH:mm")
                         
                         }}</td>
                         <td>
-                            <router-link :to="`/modifiercategorie/${categorie.id}`">
+                            <router-link :to="`/modifiercategorie/${category.id}`">
                                 <i class="fa-solid fa-pen-to-square fa-2x greenIcon"></i>
                             </router-link>
                         </td>
                         <td><i class="fa-solid fa-eraser fa-2x text-danger" data-bs-toggle="modal" data-bs-target="#confirmationModal"
-                                @click="elementToDelete = 'categorie'; idOfElementToDelete = categorie.id"></i></td>
+                                @click="elementToDelete = 'category'; idOfElementToDelete = categorie.id"></i></td>
                     </tr>
 
                 </tbody>
@@ -550,7 +550,7 @@ export default {
 
         deleteLieu(id) {
 
-            axios.delete("/api/lieus/" + id)
+            axios.delete("/api/places/" + id)
                 .then(response => {
 
                     let message = response.data.message
@@ -579,7 +579,7 @@ export default {
                     let message = response.data.message
 
                     // même principe que pour les avis ci-dessus
-                    let index = this.categories.findIndex(categorie => categorie.id == id)
+                    let index = this.categories.findIndex(category=> categorie.id == id)
                     this.categories.splice(index, 1)
 
                     // on sauvegarde la nouvelle liste dans le store

@@ -43,18 +43,10 @@ export const useUserStore = defineStore({
             this.id = userData.id
             this.department = userData.department
             this.region = userData.department ? userData.department.region.nom : null
-            this.role = userData.role
+            this.role = userData.role.name
 
-            // si token présent dans userData (= connexion, pas présent si modif infos)
-            // décommenter si appli mobile mise en place
-            // if (userData.token) {
-            //     // on stocke le token dans le store
-            //     this.token = userData.token
-            //     // pour transmettre le token (créé par l'API) avec chaque requête si connecté
-            //     axios.defaults.headers.common.Authorization = `Bearer ${userData.token}`
-            //     // on définit le statut de l'utilisateur : il est connecté
-            //     this.userLoggedIn = true
-            // }
+            //on définit le statut de l'utilisateur : il est connecté
+            this.userLoggedIn = true
         },
 
         // mémoriser le fait qu'un choix a été fait par rapport à la géoloc

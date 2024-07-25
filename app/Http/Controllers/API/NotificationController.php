@@ -66,7 +66,7 @@ class NotificationController extends BaseController
     public function update(Notification $notification)
     {
         // on marque la notification comme lue
-        $notification->lue = true;
+        $notification->read = true;
         $notification->save();
         $this->sendResponse($notification, "Notification marquée comme lue", 201);
     }

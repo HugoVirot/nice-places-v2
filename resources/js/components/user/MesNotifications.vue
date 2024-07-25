@@ -11,13 +11,13 @@
                 <div v-if="userStore.notifications.length > 0"
                     class="greenIcon mx-auto my-5 border border-4 rounded border-secondary col-md-4 offset-md-1 py-5">
                     <i class="fa-5x fa-solid fa-envelope mb-3"></i>
-                    <p><span class="fs-1">{{ notifications.length }}</span> notification(s) reçue(s) au total</p>
+                    <p><span class="fs-1">{{ userStore.notifications.length }}</span> notification(s) reçue(s) au total</p>
                 </div>
 
-                <div v-show="userStore.notifications.length > 0 && countUnreadNotifications > 0"
+                <div v-show="userStore.notifications.length > 0 && userStore.countUnreadNotifications > 0"
                     class="mx-auto my-5 text-danger border border-4 rounded border-danger col-md-4 offset-md-1 py-5">
                     <i class="fa-5x fa-solid fa-bell mb-3"></i>
-                    <p><span class="fs-1">{{ countUnreadNotifications }}</span> non lues </p>
+                    <p><span class="fs-1">{{ userStore.countUnreadNotifications }}</span> non lues </p>
                 </div>
             </div>
         </div>
@@ -70,15 +70,14 @@
 
 <script setup>
 import { useUserStore } from "../../stores/userStore"
-import { mapActions } from "pinia";
-import { mapState } from "pinia";
 import { useRouter } from "vue-router"
-import { onBeforeMount } from "vue";
+import { onBeforeMount, ref } from "vue";
 
 const userStore = useUserStore()
 const router = useRouter()
 const showFullMessage = ref(false)
 const showNotificationReadMessage = ref(false)
+
 
 // récupérer les notifications de l'utilisateur en fonction de son id
 const getNotifications = () => {
@@ -104,7 +103,7 @@ const markNotificationAsRead = notificationId => {
 
 onBeforeMount(() => {
     // on récupère les notifications de l'utilisateur
-    this.getNotifications()
+    getNotifications()
 })
 
 </script>

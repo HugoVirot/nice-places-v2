@@ -49,7 +49,7 @@
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button"
                   data-bs-toggle="dropdown" aria-expanded="false">
-                  {{ pseudo }}
+                  {{ userStore.name }}
                   <span v-show="userStore.countUnreadNotifications && userStore.countUnreadNotifications > 0
                     ">
                     <i class="text-danger fa-solid fa-bell"></i>
@@ -81,7 +81,7 @@
                     <router-link to="/meslieuxfavoris" class="nav-link">mes lieux favoris
                     </router-link>
                   </li>
-                  <li v-if="role == 'admin'">
+                  <li v-if="userStore.role == 'admin'">
                     <router-link to="/backoffice" class="nav-link">
                       back-office
                     </router-link>
@@ -114,7 +114,7 @@ const logOutUser = () => {
   userStore.$reset()
 
   // on redirige vers l'accueil
-  router.push("/successmessagehome/Déconnexion réussie")
+  router.push("/successmessage/home/Déconnexion réussie")
 }
 </script>
 

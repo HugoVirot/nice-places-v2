@@ -1,4 +1,4 @@
-import MonCompte from './MonCompte.vue'
+import Account from './Account.vue'
 
 beforeEach(() => {
   cy.session({
@@ -6,9 +6,9 @@ beforeEach(() => {
   })
 })
 
-describe('<MonCompte />', () => {
+describe('<Account />', () => {
   it('renders', () => {
     // see: https://test-utils.vuejs.org/guide/
-    cy.mount(MonCompte)
+    cy.mount(Account)
   })
 })

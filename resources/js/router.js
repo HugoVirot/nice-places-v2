@@ -8,7 +8,7 @@ const routes = [
   },
   {
     path: "/carte",
-    component: () => import('./components/views/Carte.vue')
+    component: () => import('./components/views/MapScreen.vue')
   },
   {
     path: "/categories",
@@ -16,20 +16,20 @@ const routes = [
   },
   {
     path: "/categories/:id",
-    component: () => import('./components/views/DetailCategorie.vue')
+    component: () => import('./components/views/Category.vue')
   },
   {
     path: "/toplieux",
     name: "toplieux",
-    component: () => import('./components/views/TopLieux.vue')
+    component: () => import('./components/views/TopPlaces.vue')
   },
   {
     path: "/lieu/:id",
-    component: () => import('./components/views/Lieu.vue')
+    component: () => import('./components/views/Place.vue')
   },
   {
     path: "/proposerlieu",
-    component: () => import('./components/views/ProposerLieu.vue')
+    component: () => import('./components/views/CreatePlace.vue')
   },
   {
     path: "/inscription",
@@ -41,15 +41,15 @@ const routes = [
   },
   {
     path: "/moncompte",
-    component: () => import('./components/user/MonCompte.vue')
+    component: () => import('./components/user/Account.vue')
   },
   {
     path: "/meslieuxpostes",
-    component: () => import('./components/user/MesLieuxPostes.vue')
+    component: () => import('./components/user/MyPostedPlaces.vue')
   },
   {
     path: "/meslieuxfavoris",
-    component: () => import('./components/user/MesLieuxFavoris.vue')
+    component: () => import('./components/user/MyFavoritePlaces.vue')
   },
   {
     path: "/backoffice",
@@ -61,27 +61,27 @@ const routes = [
   },
   {
     path: "/modifierlieu/:id",
-    component: () => import('./components/backoffice/ModifierLieu.vue')
+    component: () => import('./components/backoffice/EditPlace.vue')
   },
   {
     path: "/modifiercategorie/:id",
-    component: () => import('./components/backoffice/ModifierCategorie.vue')
+    component: () => import('./components/backoffice/EditCategory.vue')
   },
   {
     path: "/modifieravis/:id",
-    component: () => import('./components/backoffice/ModifierAvis.vue')
+    component: () => import('./components/backoffice/EditReview.vue')
   },
   {
     path: "/modifierimage/:id",
-    component: () => import('./components/backoffice/ModifierImage.vue')
+    component: () => import('./components/backoffice/EditImage.vue')
   },
   {
     path: "/mesnotifications",
-    component: () => import('./components/user/MesNotifications.vue')
+    component: () => import('./components/user/Notifications.vue')
   },
   {
     path: "/uploadimages/:id",
-    component: () => import('./components/views/UploadImages.vue')
+    component: () => import('./components/views/ImageUpload.vue')
   },
   {
     path: "/contact",
@@ -89,7 +89,7 @@ const routes = [
   },
   {
     path: "/politique",
-    component: () => import('./components/views/Politique.vue')
+    component: () => import('./components/views/Policy.vue')
   }
 ];
 

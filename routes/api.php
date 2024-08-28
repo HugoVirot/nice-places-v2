@@ -30,7 +30,7 @@ Route::post('logout', [App\Http\Controllers\API\LoginController::class, 'logout'
 // **************************************** routes USERS ***************************************************
 
 Route::apiResource("users", App\Http\Controllers\API\UserController::class);
-
+Route::put('users/{user}/updatepassword', [App\Http\Controllers\API\UserController::class, 'updatePassword'])->name('updatePassword');
 
 // **************************************** routes LIEUX ***************************************************
 

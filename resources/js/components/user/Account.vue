@@ -10,7 +10,7 @@
         <ValidationErrors :errors="validationErrors" v-if="validationErrors" />
 
         <div class="row justify-content-center p-2 p-lg-4">
-            <h2 class="mx-auto text-white mb-5">Bienvenue, {{ pseudo }} !</h2>
+            <h2 class="mx-auto text-white mb-5">Bienvenue, {{ userStore.name }} !</h2>
             <div class="col-md-8 p-1">
                 <div class="card">
                     <div class="card-header text-white mb-3 fs-5">Modifier mes infos</div>
@@ -23,14 +23,15 @@
                                 <label for="email" class="col-md-4 col-form-label text-md-right">e-mail</label>
 
                                 <div class="col-md-6">
-                                    <input v-model="userStore.email" id="email" type="email" class="form-control" name="email"
-                                        autocomplete="email">
+                                    <input v-model="userStore.email" id="email" type="email" class="form-control"
+                                        name="email" autocomplete="email">
                                 </div>
                             </div>
 
                             <div class="form-group row m-2">
                                 <p class="mb-2 blueElement mt-2">Département actuel :
-                                    <span v-if="department" class="fs-5"> {{ department.nom }} ({{ department.code
+                                    <span v-if="userStore.department" class="fs-5"> {{ userStore.department.name }} ({{
+                                        userStore.department.code
                                         }})</span>
                                     <span v-else class="fs-5"> aucun</span>
                                 </p>
@@ -41,8 +42,8 @@
                                     <select id="department" v-model="userStore.department" class="form-select mx-auto"
                                         aria-label="filtre" autocomplete="department">
                                         <option value="null">aucun</option>
-                                        <option v-for="department in departments" :value="department">
-                                            {{ department.code }} - {{ department.nom }}</option>
+                                        <option v-for="department in placesStore.departments" :value="department">
+                                            {{ department.code }} - {{ department.name }}</option>
                                     </select>
                                 </div>
                             </div>
@@ -56,6 +57,10 @@
                             </div>
 
                         </div>
+
+                    </form>
+
+                    <form @submit.prevent="sendPassword">
 
                         <div class="card-header text-white mt-3 mb-1 fs-5"> Modifier le mot de passe</div>
 
@@ -134,8 +139,7 @@
                             </div>
                         </div>
 
-                        <div v-if="passwordCorrect == true"
-                            class="form-group row mx-auto rounded-pill mt-2 mb-4 bg-white w-50">
+                        <div v-if="passwordCorrect" class="form-group row mx-auto rounded-pill mt-2 mb-4 bg-white w-50">
                             <i class="fa-solid fa-circle-check greenIcon fa-3x p-2 mb-2"></i>
                             <p class="titleIcon">Mot de passe sécurisé</p>
                         </div>
@@ -151,7 +155,7 @@
                             </div>
                         </div>
 
-                        <div v-if="passwordCorrect && password == password_confirmation"
+                        <div v-if="passwordCorrect && password != '' && password == password_confirmation"
                             class="form-group row mx-auto m-2 mt-3 rounded-pill bg-white w-50">
                             <i class="fa-solid fa-circle-check greenIcon fa-3x p-2"></i>
                             <p class="titleIcon">Confirmation OK</p>
@@ -203,8 +207,9 @@
 import axios from 'axios'
 import ValidationErrors from "../utilities/ValidationErrors.vue"
 import { useUserStore } from '../../stores/userStore'
-import { placesStore } from '../../stores/placesStore'
+import { usePlacesStore } from '../../stores/placesStore'
 import { useRouter } from "vue-router"
+import { ref } from 'vue'
 
 const userStore = useUserStore()
 const placesStore = usePlacesStore()
@@ -226,6 +231,7 @@ const validationErrors = ref("")
 const checkPassword = password => {
 
     passwordTyped.value = true
+    passwordCorrect.value = false
 
     if (password.length >= 8) {
         eightCharacters.value = true
@@ -257,18 +263,30 @@ const checkPassword = password => {
         oneSpecialCharacter.value = false;
     }
 
-    if (eightCharacters && oneLetter && oneUppercaseOneLowercase && oneDigit && oneSpecialCharacter) {
+    if (eightCharacters.value && oneLetter.value && oneUppercaseOneLowercase.value && oneDigit.value && oneSpecialCharacter.value) {
         passwordCorrect.value = true
     }
-},
+}
 
 // on envoie les modifs pour les sauvegarder en bdd puis on redirige
 const sendData = () => {
     axios.put('/api/users/' + userStore.id, {
-        email: userStore.email, department_id: userStore.department.id, oldPassword: oldPassword,
-        password: password, password_confirmation: password_confirmation
+        email: userStore.email, department_id: userStore.department.id
     }).then(response => {
-        this.storeUserData(response.data.data)
+        userStore.storeUserData(response.data.data)
+        router.push('/successmessage/lastpage/' + response.data.message)
+    }).catch(error => {
+        if (error.response) {
+            validationErrors.value = error.response.data.errors;
+        }
+    })
+}
+
+// on envoie les modifs pour les sauvegarder en bdd puis on redirige
+const sendPassword = () => {
+    axios.put('/api/users/' + userStore.id + '/updatepassword', {
+        oldPassword: oldPassword.value, password: password.value, password_confirmation: password_confirmation.value
+    }).then(response => {
         router.push('/successmessage/lastpage/' + response.data.message)
     }).catch(error => {
         if (error.response) {
@@ -281,24 +299,13 @@ const sendData = () => {
 const deleteAccount = () => {
     axios.delete('/api/users/' + userStore.id)
         .then((response) => {
-            // suppression compte fonctionne (plus dans bdd) mais il ne se passe rien ensuite
-            // => pas de déconnexion, mais le user n'existe plus. On reste connecté.
-            // à corriger
-            logOutUser()
-            router.push('/successmessagehome/' + response.data.message)
+            // erreur 401 unauthenticated ?
+            userStore.$reset()
+            router.push('/successmessage/home/' + response.data.message)
         })
         .catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
             alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
         })
-}
-
-// déconnecter l'utilisateur (utilisé après la suppression de compte)
-logOutUser() {
-    // on réinitialise le store 
-    userStore.$reset()
-
-    // on redirige vers l'accueil
-    router.push('/successmessagehome/Déconnexion réussie')
 }
 
 </script>

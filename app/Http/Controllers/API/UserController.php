@@ -99,7 +99,7 @@ class UserController extends BaseController
         //(pseudo et département) => pour le profil public (à venir dans une future version)
         return new UserResource($user);
     }
-    
+
 
     /**
      * Update the user in storage.
@@ -108,20 +108,11 @@ class UserController extends BaseController
      * @param  \App\Models\User  $user
      * @return \Illuminate\Http\Response
      */
-    
+
     public function update(Request $request, User $user)
     {
         $validator = Validator::make($request->all(), [
             'email' => 'required|email|max:50',
-            'oldPassword' => 'nullable',
-            'password' => [
-                'nullable', 'confirmed',
-                Password::min(8) // minimum 8 caractères   
-                    ->mixedCase() // au moins 1 minuscule et une majuscule
-                    ->letters()  // au moins une lettre
-                    ->numbers() // au moins un chiffre
-                    ->symbols() // au moins un caractère spécial     
-            ],
             'department_id' => [
                 'nullable'
             ]
@@ -137,28 +128,55 @@ class UserController extends BaseController
             'department_id' => $request->department_id
         ]);
 
-        // si nouveau mdp choisi (et qui respecte bien sûr les critères de sécurité du validateur)
-        if ($request->password) {
-
-            // si ancien mdp fourni ET valide (vérifié via Hash::check), modification validée 
-            if ($request->oldPassword && Hash::check($request->oldPassword, User::find($user->id)->password)) {
-                // on sauvegarde le nouveau mot de passe hashé
-                $user->update([
-                    'password' => Hash::make($request->password)
-                ]);
-                
-                // sinon => on renvoie une erreur
-            } else {
-                return $this->sendError('Error validation', ['mot de passe actuel non renseigné ou incorrect']);
-            }
-        }
-
         // on charge le département associé (permet de le mettre à jour en cas de changement)
         $user->load('department');
 
         // On retourne la réponse JSON
         return $this->sendResponse($user, 'Modifications validées.', 201);
     }
+
+
+    /**
+     * Update the user's password in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\User  $user
+     * @return \Illuminate\Http\Response
+     */
+
+    public function updatePassword(Request $request, User $user)
+    {
+        $validator = Validator::make($request->all(), [
+            'oldPassword' => 'required',
+            'password' => [
+                'required', 'confirmed',
+                Password::min(8) // minimum 8 caractères   
+                    ->mixedCase() // au moins 1 minuscule et une majuscule
+                    ->letters()  // au moins une lettre
+                    ->numbers() // au moins un chiffre
+                    ->symbols() // au moins un caractère spécial     
+            ]
+        ]);
+
+        if ($validator->fails()) {
+            return $this->sendError('Error validation', $validator->errors());
+        }
+
+        // si ancien mdp fourni ET valide (vérifié via Hash::check), modification validée 
+        if ($request->oldPassword && Hash::check($request->oldPassword, User::find($user->id)->password)) {
+            // on sauvegarde le nouveau mot de passe hashé
+            $user->update([
+                'password' => Hash::make($request->password)
+            ]);
+
+            return $this->sendResponse($user, 'Mot de passe modifié.', 201);
+
+            // sinon => on renvoie une erreur
+        } else {
+            return $this->sendError('Error validation', ['mot de passe actuel non renseigné ou incorrect']);
+        }
+    }
+
 
     /**
      * Remove the user from storage.
@@ -172,7 +190,6 @@ class UserController extends BaseController
         $user->delete();
 
         // On retourne la réponse JSON
-        // return response()->json();
         return $this->sendResponse(null, 'Le compte a bien été supprimé.');
     }
 }

@@ -92,7 +92,7 @@ import axios from 'axios'
 import ValidationErrors from "../utilities/ValidationErrors.vue"
 import { useUserStore } from "../../stores/userStore.js";
 import { mapActions, mapState } from 'pinia';
-import { useBackOfficeStore } from '../../stores/backOfficeStore';
+import { useBackOfficeStore } from '../../stores/backOfficeStore.js';
 
 export default {
 

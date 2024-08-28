@@ -240,7 +240,7 @@
 import axios from 'axios'
 import Map from '../utilities/Map.vue'
 import moment from 'moment';
-import PosterAvis from '../utilities/PosterAvis.vue';
+import PosterAvis from '../utilities/CreateReview.vue';
 import { useUserStore } from "../../stores/userStore"
 import { useRoute, useRouter } from 'vue-router';
 import { onBeforeMount } from 'vue';

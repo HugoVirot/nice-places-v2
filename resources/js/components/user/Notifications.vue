@@ -24,7 +24,7 @@
 
         <div v-if="showNotificationReadMessage">
             <p class="text-white greenBackground rounded mx-auto w-25 p-3">Notification marquée comme lue</p>
-            <button class="btn greenButton" @click="showNotificationReadMessage = false">OK</button>
+            <button class="btn greenButton" @click="hideMessage">OK</button>
         </div>
 
         <div class="container my-2" v-if="userStore.notifications.length > 0"
@@ -45,7 +45,7 @@
 
                             <h3 class="col-lg-7">{{ notification.titre }}</h3>
 
-                            <div v-if="!notification.lue" class="text-white col-lg-2"><i
+                            <div v-if="!notification.read" class="text-white col-lg-2"><i
                                     class="fa-solid fa-2x fa-circle-exclamation text-danger me-2"></i>Non lue</div>
                         </button>
                     </div>
@@ -99,6 +99,11 @@ const markNotificationAsRead = notificationId => {
         }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
             alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
         })
+}
+
+const hideMessage = () => {
+    setTimeout(() => { 
+        showNotificationReadMessage.value = false}, 3000)
 }
 
 onBeforeMount(() => {

@@ -74,18 +74,18 @@
     </div>
 </template>
 
-<script setup>
+<script>
 import axios from 'axios'
 import ValidationErrors from "../utilities/ValidationErrors.vue"
 import { useUserStore } from "../../stores/userStore.js";
-import { useLieuxStore } from '../../stores/lieuxStore';
+import { usePlacesStore } from '../../stores/placesStore';
 import { mapState } from 'pinia';
 
 export default {
 
     computed: {
         ...mapState(useUserStore, ['role']),
-        ...mapState(useLieuxStore, ['categories', 'storeCategories'])
+        ...mapState(usePlacesStore, ['categories', 'storeCategories'])
     },
 
     data() {

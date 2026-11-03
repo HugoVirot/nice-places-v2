@@ -1,204 +1,217 @@
 <template>
-    <div id="map" ref="map"></div>
+    <div id="map" ref="mapElement"></div>
 </template>
 
 <script setup>
-import axios from "axios";
 import { useUserStore } from "../../stores/userStore";
 import { usePlacesStore } from '../../stores/placesStore';
-import { useRouter } from "vue-router";
-import { onBeforeMount, onMounted, ref, watch } from "vue";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 const userStore = useUserStore();
 const placesStore = usePlacesStore();
-const router = useRouter();
-const map = ref(null);
+const mapElement = ref(null);
 
 const props = defineProps(['singlePlace']);
+let leafletMap = null;
+let placesLayer = null;
+let userMarker = null;
+let fullscreenButton = null;
 
-// Assurez-vous que categories est défini et initialisé correctement
-let categories = []; // ou définir par défaut un tableau vide
-let places = []; // Initialiser places s'il est également utilisé
+const updateFullscreenButton = () => {
+    if (!fullscreenButton) return;
 
-const initializeMap = () => {
-    if (!map.value) return;
+    const isFullscreen = document.fullscreenElement === mapElement.value
+        || mapElement.value?.classList.contains('map-fullscreen');
+    fullscreenButton.innerHTML = `<i class="fa-solid ${isFullscreen ? 'fa-compress' : 'fa-expand'}" aria-hidden="true"></i>`;
+    fullscreenButton.title = isFullscreen ? 'Quitter le plein écran' : 'Plein écran';
+    fullscreenButton.setAttribute('aria-label', fullscreenButton.title);
+    requestAnimationFrame(() => leafletMap?.invalidateSize());
+};
 
-    let latitude, longitude;
-
-    if (props.singlePlace) {
-        // ******************* si page détails => affichage d'un seul place (pas de pointeur user) *****************
-        latitude = props.singlePlace.latitude;
-        longitude = props.singlePlace.longitude;
-
-    } else if (userStore.userPosition) {
-        // **************** si le user a accepté la géoloc => on crée une map avec son emplacement *****************
-        latitude = userStore.userPosition.latitude;
-        longitude = userStore.userPosition.longitude;
-
-    } else {
-        // **** si le user n'a pas accepté la géoloc => on crée une map avec un emplacement par défaut (Paris) ****
-        latitude = 48.8534100;
-        longitude = 2.3488000;
+const toggleFullscreen = () => {
+    if (document.fullscreenElement === mapElement.value) {
+        document.exitFullscreen?.()?.catch(() => {});
+        return;
     }
 
-    // ***************************************** initialisation map  ******************************************************
+    if (mapElement.value?.classList.contains('map-fullscreen')) {
+        mapElement.value.classList.remove('map-fullscreen');
+        updateFullscreenButton();
+        return;
+    }
 
-    map.value = L.map('map').setView([latitude, longitude], 13);
+    const useCssFullscreen = () => {
+        mapElement.value?.classList.add('map-fullscreen');
+        updateFullscreenButton();
+    };
 
-    // pour pouvoir ajouter des tuiles
+    try {
+        const request = mapElement.value?.requestFullscreen?.();
+        if (request?.then) {
+            request.then(updateFullscreenButton).catch(useCssFullscreen);
+        } else {
+            useCssFullscreen();
+        }
+    } catch {
+        useCssFullscreen();
+    }
+};
+
+const addPlaceMarkers = () => {
+    if (!placesLayer || props.singlePlace || !Array.isArray(placesStore.places)) return;
+
+    placesLayer.clearLayers();
+
+    placesStore.places.forEach(place => {
+        const latitude = Number(place.latitude);
+        const longitude = Number(place.longitude);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+
+        const category = place.category ?? placesStore.categories?.find(item => item.id === place.category_id);
+        const markerOptions = category?.icon ? {
+            icon: L.divIcon({
+                html: `<span style="color:${category.color || '#1c6e8c'}">${category.icon}</span>`,
+                className: 'fa-2x',
+                iconSize: [40, 40]
+            })
+        } : {};
+
+        const popup = document.createElement('div');
+        popup.className = 'text-center';
+
+        const ratingRow = document.createElement('div');
+        const categoryIcon = document.createElement('span');
+        categoryIcon.className = 'mx-auto fa-2x';
+        categoryIcon.style.color = category?.color || '#1c6e8c';
+        categoryIcon.innerHTML = category?.icon || '';
+        ratingRow.appendChild(categoryIcon);
+
+        const star = document.createElement('i');
+        star.className = 'fa-solid fa-star ms-3 me-2';
+        star.style.color = 'yellow';
+        ratingRow.appendChild(star);
+
+        const rating = document.createElement('span');
+        rating.className = 'fs-5 text-secondary';
+        rating.style.fontFamily = 'Cooper';
+        rating.textContent = place.note;
+        ratingRow.appendChild(rating);
+        popup.appendChild(ratingRow);
+
+        const title = document.createElement('h5');
+        title.style.color = '#1c6e8c';
+        title.style.fontFamily = 'Cooper';
+        title.textContent = place.name;
+        popup.appendChild(title);
+
+        const coverImage = document.createElement('img');
+        coverImage.className = 'mx-auto';
+        coverImage.src = `/images/${encodeURIComponent(place.cover_image?.[0]?.name || 'defaultpicture.jpg')}`;
+        coverImage.alt = `Photo de ${place.name}`;
+        coverImage.style.width = 'min(35vw, 320px)';
+        coverImage.style.height = 'auto';
+        popup.appendChild(coverImage);
+
+        const address = document.createElement('p');
+        address.className = 'text-center text-secondary';
+        address.style.fontFamily = 'Cooper';
+        address.append(document.createTextNode(place.adress || ''));
+        address.appendChild(document.createElement('br'));
+        address.append(document.createTextNode(`${place.postcode || ''} ${place.city || ''}`.trim()));
+        popup.appendChild(address);
+
+        const detailsLink = document.createElement('a');
+        detailsLink.href = `/place/${place.id}`;
+        detailsLink.className = 'btn btn-lg greenButton';
+        detailsLink.textContent = "Plus d'infos";
+        popup.appendChild(detailsLink);
+
+        L.marker([latitude, longitude], markerOptions)
+            .bindPopup(popup, { maxWidth: 350, className: 'popupplace' })
+            .addTo(placesLayer);
+    });
+};
+
+const initializeMap = () => {
+    if (!mapElement.value || leafletMap) return;
+
+    const latitude = props.singlePlace?.latitude ?? userStore.userPosition?.latitude ?? 48.85341;
+    const longitude = props.singlePlace?.longitude ?? userStore.userPosition?.longitude ?? 2.3488;
+
+    leafletMap = L.map(mapElement.value).setView([latitude, longitude], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '© OpenStreetMap'
-    }).addTo(map.value);
+    }).addTo(leafletMap);
 
-    // ******************* si page détails => création pointeur du place *****************
-    if (props.singlePlace) {
-        L.marker([latitude, longitude]).addTo(map.value);
-
-        // ******************* sinon => création pointeur uilisateur *****************
-    } else if (userStore.userPosition) {
-        L.marker([latitude, longitude]).addTo(map.value);
-    }
-
-    // ********************************  initialisation panneau de contrôle  ***********************************************
-
-    if (!props.singlePlace && Array.isArray(categories) && categories.length > 0) {
-
-        // Ajout du panneau de contrôle et des marqueurs
-        let command = L.control({ position: 'topright' });
-
-        // onAdd = Should contain code that creates DOM elements for the layer, adds them to map panes where they should belong and puts 
-        // listeners on relevant map events. Called on map.addLayer(layer).
-        command.onAdd = function () {
-            // création de la div qui va contenir le panneau de contrôle
-            let div = L.DomUtil.create('div', 'p-3');
-
-            // ajout de style avec des classes Bootstrap
-            L.DomUtil.addClass(div, 'bg-white text-left border border-secondary rounded d-flex flex-column align-items-start');
-
-            // ajout du titre
-            div.innerHTML += '<div class="mb-2 mx-auto"><span style="font-size:18px; font-family:cooper; color: #1c6e8c">Filtrer par catégorie</span></div>';
-
-            // création d'une checkbox par catégorie
-            categories.forEach(category => {
-                div.innerHTML += `<form style="font-size: 14px"><input id="${category.id}" class="categoriesForm" type="checkbox" checked class="me-2"/> ${category.nom} <span style="color:${category.couleur}">${category.icone}</span></form>`;
-            });
-            return div;
-        };
-
-        command.addTo(map.value);
-
-        // ************************************on ajoute un pointeur par place à la map***********************************************
-
-        categories.forEach(category => { // on boucle sur les catégories 
-
-            let categoryGroup = L.featureGroup(); // on crée un groupe pour la catégorie
-
-            places.forEach(place => { // on boucle sur les lieux et on crée un marqueur pour chaque avec son popup
-
-                if (place.category.id == category.id) { // si la catégorie du place est bien la catégorie concernée, on crée le marqueur et son pointeur
-
-                    let imageCouvertureplace = place.cover_image[0] ? place.cover_image[0].nom : 'defaultpicture.jpg';
-
-                    let popupContent = `<div class="text-center"><span style="display:none">${place.id}</span>
-                                        <div><span class="mx-auto fa-2x" style="color:${place.category.couleur}">${place.category.icone}</span>
-                                        <i class="fa-solid fa-star ms-3 me-2" style="color: yellow"></i>
-                                        <span class="fs-5 text-secondary" style="font-family:'Cooper'">${place.note}</span></div>
-                                        <h5 style="color: #1C6E8C; font-family:'Cooper'">${place.name}</h5>
-                                        <img class="mx-auto" src="images/${imageCouvertureplace}" alt="image représentant le place" style="width:35vw">
-                                        <p style="font-family:'Cooper'" class="text-center text-secondary">${place.adress}<br>${place.postcode} ${place.city}</p></div>`;
-
-                    let popupOptions = { 'maxWidth': '35vw', 'className': 'popupplace' }; // on choisit les options du popup
-
-                    // on crée un icône correspondant à celui choisi pour la catégorie
-                    const fontAwesomeIcon = L.divIcon({ html: `<span style="text-shadow: 2px 2px 4px #fff; color: ${category.color}">${category.icon}</span>`, iconSize: [40, 40], className: `fa-2x ${category.name}` });
-
-                    // on ajoute le marqueur au groupe avec addTo et on lui associe son groupe avec bindPopup
-                    L.marker([place.latitude, place.longitude], { icon: fontAwesomeIcon }).addTo(categoryGroup).bindPopup(popupContent, popupOptions);
-                }
-            });
-            category.groupe = categoryGroup;       // on ajoute le groupe à la catégorie (pour afficher / masquer via panneau de contrôle)
-
-            map.value.addLayer(categoryGroup);     // on ajoute le groupe à la map
-
+    const fullscreenControl = L.control({ position: 'topright' });
+    fullscreenControl.onAdd = () => {
+        fullscreenButton = L.DomUtil.create('button', 'leaflet-bar map-fullscreen-button');
+        fullscreenButton.type = 'button';
+        fullscreenButton.innerHTML = '<i class="fa-solid fa-expand" aria-hidden="true"></i>';
+        fullscreenButton.title = 'Plein écran';
+        fullscreenButton.setAttribute('aria-label', 'Plein écran');
+        L.DomEvent.disableClickPropagation(fullscreenButton);
+        fullscreenButton.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            toggleFullscreen();
         });
+        return fullscreenButton;
+    };
+    fullscreenControl.addTo(leafletMap);
 
-        map.value.on('popupopen', function () {
-            // on cible le popup ouvert
-            let popup = document.getElementsByClassName('leaflet-popup-content')[0];
-
-            // on récupère l'id du place présent dans un span invisible au début du popup (1er enfant de la div qui englobe le contenu)
-            let placeId = popup.firstChild.firstChild.innerHTML
-
-            // on crée le bouton avec des classes pour le styliser
-            let btn = document.createElement('button')
-            btn.textContent = 'Plus d\'infos';
-            btn.classList.add('btn', 'btn-lg', 'greenButton');
-
-            // on met en place un évènement pour déclencher la redirection vers la page du place en cas de clic sur le bouton
-            btn.addEventListener("click", function () {
-                router.push('/place/' + placeId)
-            });
-
-            // on crée une div qui contiendra le bouton (pour qu'il soit centré)
-            let div = document.createElement('div')
-            div.classList.add('text-center')
-
-            // on ajoute le bouton à la div et la div au popup
-            div.appendChild(btn)
-            popup.appendChild(div)
-        })
+    if (props.singlePlace) {
+        L.marker([latitude, longitude]).addTo(leafletMap);
+        return;
     }
-}
 
-// onBeforeMount(() => {
-//     if (!placesStore.places) {
-//         axios.get("/api/places")
-//             .then(response => {
-//                 placesStore.storeplaces(response.data.data);
-//                 places = response.data.data;
-//                 // Supposez que vous récupérez également les catégories de l'API
-//                 categories = response.data.categories || [];
-//             }).catch(() => {
-//                 alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.");
-//             });
-//     } else {
-//         places = placesStore.places;
-//         // Supposez que vous avez les catégories dans le store également
-//         categories = placesStore.categories || [];
-//     }
-// });
+    if (userStore.userPosition) {
+        L.marker([latitude, longitude]).addTo(leafletMap);
+    }
 
-// code chatgpt / la carte marche sans
-// avec ou sans : pas d'affichage des catégories + pointeurs
-// watch(
-//   () => placesStore.categories,
-//   (newCategories) => {
-//     if (newCategories.length > 0) {
-//       initializeMap();
-//     }
-//   },
-//   { immediate: true }
-// );
+    placesLayer = L.layerGroup().addTo(leafletMap);
+    addPlaceMarkers();
+};
+
+watch(
+    [() => placesStore.places, () => placesStore.categories],
+    addPlaceMarkers
+);
 
 onMounted(() => {
-    if (!userStore.geolocationAnswered) {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(position => {
-                userStore.storeGeolocationAnswered(true);
-                userStore.storeUserPosition({ latitude: position.coords.latitude, longitude: position.coords.longitude });
-                initializeMap();
-            }, () => {
-                userStore.storeGeolocationAnswered(true);
-                initializeMap();
-            });
-        } else {
-            alert("La géolocalisation est indisponible sur votre navigateur");
-            initializeMap();
-        }
-    } else {
-        initializeMap();
+    document.addEventListener('fullscreenchange', updateFullscreenButton);
+    initializeMap();
+
+    if (props.singlePlace) {
+        return;
     }
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+            userStore.storeGeolocationAnswered(true);
+            userStore.storeUserPosition({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+            });
+            const coordinates = [position.coords.latitude, position.coords.longitude];
+            leafletMap.setView(coordinates, 13);
+            userMarker = L.marker(coordinates).addTo(leafletMap);
+        }, () => {
+            userStore.storeGeolocationAnswered(true);
+        });
+    } else {
+        userStore.storeGeolocationAnswered(true);
+    }
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener('fullscreenchange', updateFullscreenButton);
+    if (document.fullscreenElement === mapElement.value) {
+        document.exitFullscreen?.();
+    }
+    mapElement.value?.classList.remove('map-fullscreen');
+    leafletMap?.remove();
 });
 </script>
 
@@ -206,5 +219,37 @@ onMounted(() => {
 #map {
     height: 75vh;
     margin: auto;
+}
+
+#map:fullscreen {
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    background: white;
+}
+
+#map.map-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    background: white;
+}
+
+:global(.map-fullscreen-button) {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    background: white;
+    color: #222;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+:global(.map-fullscreen-button:hover) {
+    background: #f4f4f4;
+    color: #1c6e8c;
 }
 </style>

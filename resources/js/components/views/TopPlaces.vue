@@ -31,10 +31,10 @@
 </template>
 
 <script setup>
-import Filtres from "../utilities/Filtres.vue"
+import Filtres from "../utilities/Filters.vue"
 import PlaceCard from '../utilities/PlaceCard.vue'
 import { usePlacesStore } from '../../stores/placesStore';
-import { onBeforeMount } from "vue";
+import { onBeforeMount, ref } from "vue";
 
 const placesStore = usePlacesStore()
 
@@ -48,9 +48,9 @@ const updatePlaces = sortedPlaces => {  // déclenchée si filtre appliqué via 
 onBeforeMount(() => {
     // on appelle le getter getTopRatedPlaces pour récupérer les 100 lieux les mieux notés
     // on les stocke dans la variable toplieux des datas
-    topPlaces = placesStore.getTopRatedPlaces
+    topPlaces.value = placesStore.getTopRatedPlaces
     // on garde une copie de cette liste des 100 lieux les mieux notés en cas de retour
     // à l'affichage normal après avoir effectué un ou plusieurs tris
-    topUnfilteredPlaces = this.topPlaces
+    topUnfilteredPlaces.value = topPlaces.value
 })
 </script>

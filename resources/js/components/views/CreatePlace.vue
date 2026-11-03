@@ -69,7 +69,7 @@ const sendData = () => {
         }).catch((error) => {
             validationErrors.value = error.response.data.errors;
         })
-},
+}
 
 // on sauvegarde une notification en base de données pour indiquer à l'utilisateur
 // que son place a bien été proposé et est mis en attente

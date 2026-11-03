@@ -95,7 +95,7 @@ const validationErrors = ref([])
 const onChange = e => {
     let chosenImage = e.target.files[0]
     this.formData.append('image', chosenImage)
-},
+}
 
 const sendData = () => {
 

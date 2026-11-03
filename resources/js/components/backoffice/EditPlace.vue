@@ -100,8 +100,8 @@
 
                                 <div class="col-md-6">
                                     <select v-model="categorie_id" class="form-select" aria-label="categorie_id">
-                                        <option v-for="categoryin categories" :value="categorie.id">
-                                            {{ categorie.nom }}
+                                        <option v-for="category in categories" :key="category.id" :value="category.id">
+                                            {{ category.nom }}
                                         </option>
                                     </select>
                                 </div>
@@ -209,11 +209,11 @@
     </div>
 </template>
 
-<script setup>
+<script>
 import axios from 'axios'
 import ValidationErrors from "../utilities/ValidationErrors.vue"
 import { useUserStore } from "../../stores/userStore.js";
-import { useLieuxStore } from '../../stores/lieuxStore';
+import { usePlacesStore } from '../../stores/placesStore';
 import { mapState, mapWritableState } from 'pinia';
 import { mapActions } from 'pinia';
 
@@ -221,8 +221,8 @@ export default {
 
     computed: {
         ...mapState(useUserStore, ['role']),
-        ...mapState(useLieuxStore, ['categories', 'departments']),
-        ...mapWritableState(useLieuxStore, ['lieux'])
+        ...mapState(usePlacesStore, ['categories', 'departments']),
+        ...mapWritableState(usePlacesStore, ['lieux'])
     },
 
     data() {
@@ -252,7 +252,7 @@ export default {
     components: { ValidationErrors },
 
     methods: {
-        ...mapActions(useLieuxStore, ['storeLieux']),
+        ...mapActions(usePlacesStore, ['storeLieux']),
 
         // cette fonction permet de mettre à jour les données locales du composant
         // une fois que l'appel API a récupéré le lieu

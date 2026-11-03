@@ -70,7 +70,7 @@ import ValidationErrors from "../utilities/ValidationErrors.vue"
 import { useRouter } from "vue-router"
 
 const userStore = useUserStore()
-cons router = useRouter()
+const router = useRouter()
 const name = ref('')
 const email = ref('')
 const message = ref('')

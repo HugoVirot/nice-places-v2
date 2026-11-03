@@ -221,7 +221,7 @@ onMounted(() => {
 
 					<div v-for="(category, index) in placesStore.categories.slice(0, 3)" :key="category.id"
 						class="mx-auto col-md-6 col-lg-4 p-5 border border-white"
-						:style="`background-image: url('images/categorie${category.id}.jpg'); background-position: center; background-size: cover;`">
+						:style="`background-image: url('/images/category${category.id}.jpg'); background-position: center; background-size: cover;`">
 
 						<p class="fs-2 m-auto text-white textWithShadow p-5">{{ category.name }}</p>
 
@@ -604,13 +604,13 @@ p {
 	}
 
 	.inscrivezVousIcones {
-		width: 30vw;
-		height: 30vw
+		width: 20vw;
+		height: 20vw
 	}
 
 	#pointer {
-		width: 20vw;
-		height: 30vw
+		width: 12vw;
+		height: 20vw
 	}
 
 	.bigFontSize2 {

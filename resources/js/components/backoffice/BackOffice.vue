@@ -424,13 +424,13 @@
 
 </template>
 
-<script setup>
+<script>
 import moment from 'moment';
 import axios from "axios";
 import { mapWritableState } from 'pinia';
 import { mapActions } from 'pinia';
 import { useBackOfficeStore } from '../../stores/backOfficeStore'
-import { useLieuxStore } from '../../stores/lieuxStore';
+import { usePlacesStore } from '../../stores/placesStore';
 import ValidationErrors from '../utilities/ValidationErrors.vue'
 
 moment.locale('fr');
@@ -443,7 +443,7 @@ export default {
     computed: {
         ...mapWritableState(useBackOfficeStore, ['avis', 'users', 'images']),
 
-        ...mapWritableState(useLieuxStore, [
+        ...mapWritableState(usePlacesStore, [
             'lieux',
             'categories'
         ]),
@@ -495,7 +495,7 @@ export default {
 
         ...mapActions(useBackOfficeStore, ['storeAvis', 'storeUsers', 'storeImages']),
 
-        ...mapActions(useLieuxStore, ['storeLieux', 'storeCategories']),
+        ...mapActions(usePlacesStore, ['storeLieux', 'storeCategories']),
 
         showModal() {
             this.showConfirm = true;

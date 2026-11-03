@@ -42,7 +42,7 @@
 
         </div>
 
-        <img class="singlePicture" v-if="place.images.length == 0" src="/images/defaultpicture.jpg"
+        <img class="singlePicture" v-if="place.images.length == 0" :src="'/images/defaultpicture.jpg'"
             alt="image par défaut">
 
         <img class="singlePicture" v-else-if="place.images.length == 1" :src="`/images/${place.images[0].name}`"
@@ -280,7 +280,7 @@ const addToFavorites = () => {
         }).catch(() => {
             alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
         })
-},
+}
 
 const removeToFavorites = () => {
     axios.delete('/api/favorites/' + userStore.id + '/' + placeId)

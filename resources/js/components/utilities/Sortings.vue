@@ -21,15 +21,15 @@ const sortedByRating = ref(false)
 const sortedByTime = ref(false)
 const sortedByDifficulty = ref(false)
 
-defineProps(['places'])
-defineEmits(['placesSorted'])
+const props = defineProps(['places'])
+const emit = defineEmits(['placesSorted'])
 
 // tri par note moyenne
 const sortByRating = () => {
     // on stocke les lieux dans une variable temporaire (impossible de modifier une prop)
-    let placesToBeSorted = this.places
+    let placesToBeSorted = [...props.places]
 
-    if (!this.sortedByRating) { // si lieux pas encore triés par note : tri décroissant
+    if (!sortedByRating.value) { // si lieux pas encore triés par note : tri décroissant
 
         placesToBeSorted.sort((a, b) => {
             if (a.note > b.note) return -1;
@@ -52,9 +52,9 @@ const sortByRating = () => {
 // tri par temps moyen sur place
 const sortByTime = () => {
     // on stocke les lieux dans une variable temporaire (impossible de modifier une prop)
-    let placesToBeSorted = this.places
+    let placesToBeSorted = [...props.places]
 
-    if (!this.sortedByTime) { // si lieux pas encore triés par temps : tri croissant (+ court au + long)
+    if (!sortedByTime.value) { // si lieux pas encore triés par temps : tri croissant (+ court au + long)
 
         placesToBeSorted.sort((a, b) => {
             if (a.temps < b.temps) return -1;
@@ -69,15 +69,15 @@ const sortByTime = () => {
         });
     }
 
-    sortedByTime.value = sortedByTime.value
+    sortedByTime.value = !sortedByTime.value
 
     emit("placesSorted", placesToBeSorted)
 }
 
 // tri par difficulté
-sortByDifficulty() {
+const sortByDifficulty = () => {
     // on stocke les lieux dans une variable temporaire (impossible de modifier une prop)
-    let placesToBeSorted = this.places
+    let placesToBeSorted = [...props.places]
     let sortedPlaces = []
 
     let easyPlaces = []
@@ -100,7 +100,7 @@ sortByDifficulty() {
     })
 
     // selon l'état actuel du tri, on concatène les tableaux dans un ordre ou dans l'autre
-    if (!sortedByDifficulty) {
+    if (!sortedByDifficulty.value) {
         sortedPlaces = easyPlaces.concat(mediumPlaces).concat(hardPlaces)
     } else {
         sortedPlaces = hardPlaces.concat(mediumPlaces).concat(easyPlaces)

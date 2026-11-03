@@ -33,33 +33,35 @@
 
 <script setup>
 import axios from "axios";
-import Filters from "../utilities/Filtres.vue"
-import Tris from "../utilities/Tris.vue"
+import Filters from "../utilities/Filters.vue"
+import Tris from "../utilities/Sortings.vue"
 import PlaceCard from "../utilities/PlaceCard.vue";
-import { onBeforeMount } from "vue";
+import { onBeforeMount, ref } from "vue";
+import { useRoute } from "vue-router";
 
 const category = ref('')
 const loading = ref(true)
 const unfilteredPlaces = ref('')
+const route = useRoute()
 
 const updatePlaces = filteredOrSortedPlaces => {  // déclenchée si tri ou filtre appliqué via composant enfant Tris ou  Filtres
-    category.places = filteredOrSortedPlaces // on remplace les lieux de la catégorie par les lieux triés ou filtrés 
-},
+    category.value.places = filteredOrSortedPlaces // on remplace les lieux de la catégorie par les lieux triés ou filtrés 
+}
 
 // filtre les places en ne gardant que ceux validés
 const getValidatedPlaces = () => {
-    category.places = category.places.filter(place => place.status == "validé")
+    category.value.places = category.value.places.filter(place => place.status == "validé")
 }
 
 // on récupère la catégorie en fonction de l'id passé en paramètre de la route
 onBeforeMount(() => {
 
-    axios.get("/api/categories/" + $route.params.id)
+    axios.get("/api/categories/" + route.params.id)
         .then(response => {
             category.value = response.data
             getValidatedPlaces()
             loading.value = false
-            unfilteredPlaces = category.places
+            unfilteredPlaces.value = category.value.places
 
         }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
             alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")

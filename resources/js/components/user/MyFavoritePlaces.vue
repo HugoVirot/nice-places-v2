@@ -30,8 +30,8 @@
 
 <script setup>
 import { useUserStore } from "../../stores/userStore"
-import Filters from "../utilities/Filtres.vue"
-import Tris from "../utilities/Tris.vue"
+import Filters from "../utilities/Filters.vue"
+import Tris from "../utilities/Sortings.vue"
 import PlaceCard from "../utilities/PlaceCard.vue"
 import { onBeforeMount } from "vue";
 
@@ -47,7 +47,7 @@ const getFavorites = () => {
         }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
             alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
         })
-},
+    }
 
 const updatePlaces = sortedPlaces => {  // déclenchée si filtre appliqué via composant enfant Filtres
     favoritesList.value = sortedPlaces // on remplace les lieux de la catégorie par les lieux filtrés 

@@ -121,7 +121,8 @@ const logOutUser = () => {
 <style>
 @font-face {
   font-family: "Cooper";
-  src: "./Cooper_Black_Regular.ttf" format("truetype")
+  src: url("../../Cooper_Black_Regular.ttf") format("truetype");
+  font-display: swap;
 }
 
 header {

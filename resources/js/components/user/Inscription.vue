@@ -187,7 +187,7 @@
 <script setup>
 import axios from 'axios'
 import ValidationErrors from "../utilities/ValidationErrors.vue"
-import { useLieuxStore } from "../../stores/lieuxStore.js"
+import { usePlacesStore } from "../../stores/placesStore.js"
 
 const placesStore = usePlacesStore()
 
@@ -223,7 +223,7 @@ const sendData = () => {
         .catch((error) => {
             this.validationErrors = error.response.data.errors;
         })
-},
+    }
 
 const createNotification = userId => {
 
@@ -240,7 +240,7 @@ const createNotification = userId => {
         .catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
             alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
         })
-},
+    }
 
 const checkPassword = password => {
 

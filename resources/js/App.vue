@@ -358,7 +358,7 @@ onBeforeMount(() => {
 					</div>
 				</div>
 
-				<router-link to="/proposerplace"><button class="btn btn-lg blueButton mt-3 rounded-pill">Proposer un
+				<router-link to="/proposerlieu"><button class="btn btn-lg blueButton mt-3 rounded-pill">Proposer un
 						lieu</button>
 				</router-link>
 

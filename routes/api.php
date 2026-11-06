@@ -34,6 +34,10 @@ Route::put('users/{user}/updatepassword', [App\Http\Controllers\API\UserControll
 
 // **************************************** routes LIEUX ***************************************************
 
+Route::get('places/geocode', [App\Http\Controllers\API\PlaceController::class, 'geocode'])
+    ->middleware('throttle:30,1')
+    ->name('places.geocode');
+
 Route::apiResource("places", App\Http\Controllers\API\PlaceController::class)
     ->parameters(['places' => 'lieu']);
 
@@ -55,11 +59,13 @@ Route::apiResource("reviews", App\Http\Controllers\API\ReviewController::class);
 // ************************************** routes CATEGORIES *************************************************
 
 Route::apiResource("categories", App\Http\Controllers\API\CategoryController::class);
+Route::post('categories/{category}/image', [App\Http\Controllers\API\CategoryController::class, 'updateImage'])
+    ->name('categories.updateImage');
 
 
 // **************************************** routes FAVORIS ********************************************
 
-Route::apiResource("favorites", App\Http\Controllers\API\FavoriteController::class)->except('index', 'update', 'show', 'delete');
+Route::apiResource("favorites", App\Http\Controllers\API\FavoriteController::class)->except('index', 'update', 'show', 'destroy');
 Route::get('favorites/{user}', [App\Http\Controllers\API\FavoriteController::class, 'index'])->name('index');
 Route::delete('favorites/{user}/{lieu}', [App\Http\Controllers\API\FavoriteController::class, 'destroy'])->name('destroy');
 

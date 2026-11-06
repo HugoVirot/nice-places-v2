@@ -4,9 +4,9 @@ namespace App\Http\Controllers\API;
 
 use App\Models\Review;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use App\Models\Place;
-use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class ReviewController extends BaseController
 {
@@ -26,6 +26,8 @@ class ReviewController extends BaseController
      */
     public function index()
     {
+        $this->authorizeAdmin(request());
+
         $reviews = Review::all();
         return $this->sendResponse($reviews, 'Avis récupérés avec succès');
     }
@@ -49,46 +51,38 @@ class ReviewController extends BaseController
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'note' => 'required|integer|min:1|max:10',
-            'comment' => 'nullable|min:5|max:2000',
-            'place_id' => 'required'
+        $validated = $request->validate([
+            'note' => ['required', 'integer', 'min:1', 'max:10'],
+            'comment' => ['nullable', 'string', 'min:5', 'max:2000'],
+            'place_id' => ['required', 'integer', 'exists:places,id'],
         ]);
 
-        if ($validator->fails()) {
-            return $this->sendError('Error validation', $validator->errors());
-        }
+        $review = DB::transaction(function () use ($request, $validated) {
+            $user = $request->user();
+            $place = Place::findOrFail($validated['place_id']);
+            $isAdmin = $user->role()->where('name', 'admin')->exists();
 
-        // on crée un nouvel avis 
-        $reviews = Review::create([
-            'note' => $request->note,
-            'comment' => $request->comment,
-            'place_id' => $request->place_id,
-            'user_id' => $request->user_id,
-            // selon le statut de l'utilisateur (admin ou utilisateur standard), on valide ou on met en attente l'avis
-            'status' => User::find($request->user_id)->role->name == "admin" ? "validé" : "en attente",
-        ]);
+            $review = Review::create([
+                'note' => $validated['note'],
+                'comment' => $validated['comment'] ?? null,
+                'place_id' => $place->id,
+                'user_id' => $user->id,
+                'status' => $isAdmin ? 'validé' : 'en attente',
+            ]);
 
-        // actualiser la note moyenne du lieu en fonction de la note de l'avis
+            if ($isAdmin) {
+                $place->note = $place->reviews()->avg('note');
+                $place->save();
+            }
 
-        // 1 ) on récupère le lieu avec son nombre d'avis
-        $lieu = Place::find($reviews->lieu_id);
-        $lieu->loadCount('reviews');
+            return $review;
+        });
 
-        // 2) on calcule la nouvelle note moyenne = (note actuelle * nb notes + nouvelle note) / (nb notes + 1)
+        $message = $review->status === 'validé'
+            ? 'Votre avis a bien été enregistré.'
+            : "Votre avis a bien été enregistré. Il sera contrôlé par l'administrateur.";
 
-        $reviewRating = intval($request->note); // intval transforme la note en integer
-        $currentAverageRating = $lieu->note;    // note moyenne actuelle de l'article
-        $notesNumber = $lieu->avis_count + 1;   // comptage du nombre de notes
-        $newAverageRating = ($currentAverageRating * $notesNumber + $reviewRating) / ($notesNumber + 1); // calcul final
-
-        // 3) on la sauvegarde
-        $lieu->note = $newAverageRating;
-        $lieu->save();
-
-        // On retourne l'avis créé avec un message de confirmation
-        $message = "Votre avis a bien été enregistré. Il sera contrôlé par l'administrateur.";
-        return $this->sendResponse($reviews, $message, 201);
+        return $this->sendResponse($review, $message, 201);
     }
 
     /**
@@ -100,19 +94,25 @@ class ReviewController extends BaseController
      */
     public function update(Request $request, Review $review)
     {
-        $validator = Validator::make($request->all(), [
-            'note' => 'required|integer|min:1|max:10',
-            'comment' => 'nullable|min:5|max:2000',
+        $this->authorizeAdmin($request);
+        $validated = $request->validate([
+            'note' => 'sometimes|required|integer|min:1|max:10',
+            'comment' => 'sometimes|nullable|string|min:5|max:2000',
+            'status' => 'sometimes|required|in:validé,en attente,refusé',
         ]);
-
-        if ($validator->fails()) {
-            return $this->sendError('Error validation', $validator->errors());
+        if (empty($validated)) {
+            return $this->sendError('Aucune modification fournie.', [], 422);
         }
 
-        $review->update($request->except('_token'));
+        $review->update($validated);
+        $place = $review->place;
+        if ($place) {
+            $place->note = $place->reviews()->avg('note') ?? 0;
+            $place->save();
+        }
 
         $message = "L'avis a bien été modifié";
-        return $this->sendResponse($review, $message, 201);
+        return $this->sendResponse($review->fresh(), $message, 201);
     }
 
     /**
@@ -123,7 +123,13 @@ class ReviewController extends BaseController
      */
     public function destroy(Review $review)
     {
+        $this->authorizeAdmin(request());
+        $place = $review->place;
         $review->delete();
+        if ($place) {
+            $place->note = $place->reviews()->avg('note') ?? 0;
+            $place->save();
+        }
         $message = "Avis supprimé avec succès";
         return $this->sendResponse($review, $message);
     }

@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\API;
 
 use App\Models\Place;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use App\Models\User;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class PlaceController extends BaseController
 {
@@ -34,10 +35,53 @@ class PlaceController extends BaseController
      *
      * @return \Illuminate\Http\Response 
      */
-    public function getAllPlaces()
+    public function getAllPlaces(Request $request)
     {
+        $this->authorizeAdmin($request);
+
         $places = Place::all();
         return $this->sendResponse($places, 'Lieux récupérés avec succès');
+    }
+
+    public function geocode(Request $request)
+    {
+        $validated = $request->validate([
+            'q' => 'required|string|min:3|max:150',
+        ]);
+
+        $client = Http::acceptJson()
+            ->connectTimeout(3)
+            ->timeout(8);
+
+        if (defined('CURLSSLOPT_NATIVE_CA')) {
+            $client = $client->withOptions([
+                'curl' => [CURLOPT_SSL_OPTIONS => CURLSSLOPT_NATIVE_CA],
+            ]);
+        }
+
+        try {
+            $response = $client
+                ->get('https://data.geopf.fr/geocodage/search', [
+                    'q' => $validated['q'],
+                    'index' => 'address,poi',
+                    'limit' => 5,
+                ]);
+        } catch (ConnectionException $exception) {
+            Log::warning('IGN geocoding service connection failed.', ['exception' => $exception->getMessage()]);
+
+            return $this->sendError('La recherche de lieu est temporairement indisponible.', [], 503);
+        }
+
+        $features = $response->json('features');
+        if (!$response->successful() || !is_array($features)) {
+            Log::warning('IGN geocoding service returned an invalid response.', [
+                'status' => $response->status(),
+            ]);
+
+            return $this->sendError('La recherche de lieu est temporairement indisponible.', [], 503);
+        }
+
+        return $this->sendResponse($features, 'Résultats de recherche récupérés avec succès.');
     }
 
 
@@ -51,60 +95,38 @@ class PlaceController extends BaseController
     {
         // on précise les critères attendus pour les champs
         // longitude et latitude : intervalles possibles définis avec between
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|min:10|max:100',
-            'description' => 'required|min:25|max:3000',
-            'latitude' => 'required|between:-90,90',
-            'longitude' => 'required|between:-180,180',
-            'category' => 'required|integer',
-            'note' => 'required|integer|min:1|max:10',
-            'time' => 'required|integer|min:1|max:24', // temps en heures
-            'difficulty' => 'required', // énumération : choix entre "famille", "amateur" et "sportif"
+        $validated = $request->validate([
+            'name' => 'required|string|min:3|max:100',
+            'description' => 'nullable|string|max:3000',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+            'category_id' => 'required|integer|exists:categories,id',
+            'note' => 'nullable|numeric|min:1|max:10',
+            'time' => 'nullable|integer|min:1|max:24',
+            'difficulty' => 'nullable|in:famille,amateur,sportif',
             'kilometres' => 'nullable|integer|min:1|max:100',
-            'department' => 'required',
-            'adress' => 'required|min:5|max:75',
-            'postcode' => 'required|min:5|max:5',
-            'city' => 'required|min:3|max:50',
+            'department_id' => 'required|integer|exists:departments,id',
+            'adress' => 'required|string|min:5|max:75',
+            'postcode' => 'required|string|size:5',
+            'city' => 'required|string|min:3|max:50',
         ]);
 
-        if ($validator->fails()) {
-            return $this->sendError('Error validation', $validator->errors());
-        }
+        $validated['description'] = $validated['description'] ?? 'Aucune description renseignée.';
+        $validated['note'] = $validated['note'] ?? 5;
+        $validated['time'] = $validated['time'] ?? 1;
+        $validated['difficulty'] = $validated['difficulty'] ?? 'famille';
 
-        $message = "";
-        // si le user est Admin => on valide directement la création du lieu (valide = true)
-        if (User::find($request->user_id)->role->name == "admin") {
-            $message = "Le lieu a bien été créé.";
-
-            // sinon, le lieu est créé mais en attente de validation (valide = false)
-            // il n'est donc pas encore affiché sur la carte
-        } else {
-            $message = "Le lieu a bien été proposé (en attente de validation par l'administrateur).";
-        }
-
-        // ************************************ sauvegarde du lieu *************************************
-
-        $lieu = Place::create([
-            'name' => $request->nom,
-            'description' => $request->description,
-            'latitude' => $request->latitude,
-            'longitude' => $request->longitude,
-            'note' => $request->note,
-            'time' => $request->temps,
-            'difficulty' => $request->difficulty,
-            'kilometres' => $request->kilometres,
-            'department_id' => $request->department,
-            'adress' =>  $request->adresse,
-            'postcode' =>  $request->postcode,
-            'city' =>  $request->city,
-            'user_id' => $request->user_id,
-            // selon le statut de l'utilisateur (admin ou utilisateur standard), on valide ou on met en attente le lieu
-            'status' => User::find($request->user_id)->role->name == "admin" ? "validé" : "en attente",
-            'category' => $request->category
+        $isAdmin = (int) $request->user()->role?->id === 2;
+        $place = Place::create([
+            ...$validated,
+            'user_id' => $request->user()->id,
+            'status' => $isAdmin ? 'validé' : 'en attente',
         ]);
+        $message = $isAdmin
+            ? 'Le lieu a bien été créé.'
+            : "Le lieu a bien été proposé (en attente de validation par l'administrateur).";
 
-        // On retourne la réponse JSON (code 201 = ressource créée avec succès)
-        return $this->sendResponse($lieu, $message, 201);
+        return $this->sendResponse($place->fresh(), $message, 201);
     }
 
 
@@ -125,7 +147,7 @@ class PlaceController extends BaseController
 
     public function getPlacesByUser(Request $request)
     {
-        $userPlaces = Place::where('user_id', intval($request->user_id))->get();
+        $userPlaces = $request->user()->places()->latest()->get();
         return $this->sendResponse($userPlaces, 'Nombre de lieux postés récupéré avec succès');
     }
 
@@ -148,34 +170,57 @@ class PlaceController extends BaseController
      */
     public function update(Request $request, Place $lieu)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|min:10|max:100',
-            'description' => 'required|min:25|max:3000',
-            'latitude' => 'required|between:-90,90',
-            'longitude' => 'required|between:-180,180',
-            'category_id' => 'required|integer',
-            'note' => 'required|min:1|max:10',
-            'time' => 'required|integer|min:1|max:24', // temps en heures
-            'difficulty' => 'required', // énumération : choix entre "famille", "amateur" et "sportif"
-            'kilometres' => 'nullable|integer|min:1|max:100',
-            'department_id' => 'required|integer',
-            'adresse' => 'required|min:5|max:75',
-            'postcode' => 'required|min:5|max:5',
-            'city' => 'required|min:3|max:50',
-            'status' => 'required',
-            'comment' => 'nullable|min:5|max:1000' // notes de l'admin
+        $this->authorizeAdmin($request);
+
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|min:10|max:100',
+            'description' => 'sometimes|required|string|min:25|max:3000',
+            'latitude' => 'sometimes|required|numeric|between:-90,90',
+            'longitude' => 'sometimes|required|numeric|between:-180,180',
+            'category_id' => 'sometimes|required|integer|exists:categories,id',
+            'note' => 'sometimes|required|numeric|min:1|max:10',
+            'time' => 'sometimes|required|integer|min:1|max:24',
+            'difficulty' => 'sometimes|required|in:famille,amateur,sportif',
+            'kilometres' => 'sometimes|nullable|integer|min:1|max:100',
+            'department_id' => 'sometimes|required|integer|exists:departments,id',
+            'adress' => 'sometimes|required|string|min:5|max:75',
+            'postcode' => 'sometimes|required|string|size:5',
+            'city' => 'sometimes|required|string|min:3|max:50',
+            'status' => 'sometimes|required|in:validé,en attente,à modifier,refusé',
+            'comment' => 'sometimes|required_if:status,à modifier,refusé|nullable|string|min:5|max:1000',
         ]);
 
-        if ($validator->fails()) {
-            return $this->sendError('Error validation', $validator->errors());
+        if (empty($validated)) {
+            return $this->sendError('Aucune modification fournie.', [], 422);
         }
 
-        // on met à jour le lieu en base de données
-        $lieu->update($request->except('_token'));
+        $previousStatus = $lieu->status;
+        $lieu->update($validated);
+
+        if (
+            isset($validated['status'])
+            && $validated['status'] !== $previousStatus
+            && $lieu->user_id
+            && in_array($validated['status'], ['validé', 'à modifier', 'refusé'], true)
+        ) {
+            $statusMessages = [
+                'validé' => 'a été validé',
+                'à modifier' => 'nécessite des modifications',
+                'refusé' => 'a été refusé',
+            ];
+            \App\Models\Notification::create([
+                'title' => "Votre lieu « {$lieu->name} » {$statusMessages[$validated['status']]}",
+                'message' => $validated['status'] === 'à modifier' || $validated['status'] === 'refusé'
+                    ? ($lieu->comment ?: 'Aucun commentaire transmis.')
+                    : "Votre lieu « {$lieu->name} » est maintenant visible sur Nice Places.",
+                'user_id' => $lieu->user_id,
+                'place_id' => $lieu->id,
+            ]);
+        }
 
         // On retourne la réponse en JSON
         $message = "Lieu modifié avec succès";
-        return $this->sendResponse($lieu, $message);
+        return $this->sendResponse($lieu->fresh(), $message);
     }
 
 
@@ -187,6 +232,8 @@ class PlaceController extends BaseController
      */
     public function destroy(Place $lieu)
     {
+        $this->authorizeAdmin(request());
+
         // on supprime le lieu
         $lieu->delete();
 

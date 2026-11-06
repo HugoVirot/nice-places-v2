@@ -4,7 +4,7 @@
         <p class="text-white fs-4">sorties nature près de chez vous</p>
         <p><router-link to="/politique">mentions légales / politique de confidentialité</router-link> | 
             <router-link to="/contact">contact</router-link></p>
-        <p>© 2022-2024 Nice Places</p>
+        <p>© 2022-2026 Nice Places</p>
     </footer>
 </template>
 
@@ -18,7 +18,7 @@ footer p {
 }
 
 #logoFooter {
-    width: 30vw
+    width: 15vw
 }
 
 @media screen and (min-width: 769px) and (max-width: 1024px) {

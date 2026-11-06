@@ -39,7 +39,7 @@
             <router-link to="/" class="navbar-brand">accueil</router-link>
             <router-link to="/carte" class="nav-link">carte</router-link>
             <router-link to="/categories" class="nav-link">catégories</router-link>
-            <router-link to="/toplieux" class="nav-link">top 100 des lieux</router-link>
+            <router-link to="/toplieux" class="nav-link">liste des lieux</router-link>
             <router-link to="/proposerlieu" class="nav-link">proposer un lieu</router-link>
 
             <!-- si utilisateur connecté : mon compte / mes lieux, si pas connecté : inscription/connexion -->
@@ -79,7 +79,7 @@
                     <router-link to="/meslieuxfavoris" class="nav-link">mes lieux favoris
                     </router-link>
                   </li>
-                  <li v-if="userStore.role == 'admin'">
+                  <li v-if="Number(userStore.roleId) === 2 || (!userStore.roleId && userStore.role === 'admin')">
                     <router-link to="/backoffice" class="nav-link">
                       back-office
                     </router-link>

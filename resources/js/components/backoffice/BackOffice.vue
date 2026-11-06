@@ -1,721 +1,510 @@
 <template>
-    <div class="p-5">
-        <i class="greenIcon fa-solid fa-3x fa-wrench"></i>
-        <h1 class="mt-2">Back-office</h1>
-    </div>
+    <main v-if="!isAdmin" class="container py-5 text-center" role="alert">
+        <h1>Accès réservé à l'administration</h1>
+    </main>
 
-    <!-- évènements : lieux / avis / images à valider -->
-    <div class="container">
-        <div class="row">
-            <!-- images à valider-->
-            <div v-if="countNewImages > 0" @click="showImages = !showImages"
-                class="mx-auto text-danger border border-4 rounded border-danger col-md-4 offset-md-1 py-5">
-                <i class="fa-5x fa-solid fa-images mb-3"></i>
-                <p class="fs-3"><span class="fs-1">{{ countNewImages }}</span> image(s) à valider</p>
-            </div>
-            <!-- images à jour-->
-            <div v-else @click="showImages = !showImages"
-                class="mx-auto border border-4 rounded border-secondary col-md-4 offset-md-1 py-5">
-                <i class="blueElement fa-5x fa-solid fa-images mb-3"></i>
-                <p class="fs-3"><i class="fa-2x fa-solid fa-check greenIcon mb-3"></i>images à jour</p>
-            </div>
+    <main v-else class="container-fluid p-3 p-lg-5">
+        <header class="p-3 text-center">
+            <i class="greenIcon fa-solid fa-3x fa-wrench"></i>
+            <h1 class="mt-2">Back-office</h1>
+        </header>
 
-            <!-- lieux à valider-->
-            <div v-if="countNewLieux > 0" @click="showLieux = !showLieux"
-                class="mx-auto text-danger border border-4 rounded border-danger col-md-4 offset-md-1 py-5">
-                <i class="fa-5x fa-solid fa-images mb-3"></i>
-                <p class="fs-3"><span class="fs-1">{{ countNewLieux }}</span> lieu(x) à valider</p>
-            </div>
-            <!-- lieux à jour-->
-            <div v-else @click="showLieux = !showLieux"
-                class="mx-auto border border-4 rounded border-secondary col-md-4 offset-md-1 py-5">
-                <i class="blueElement fa-5x fa-solid fa-location-dot mb-3"></i>
-                <p class="fs-3"><i class="fa-2x fa-solid fa-check greenIcon mb-3"></i>lieux à jour</p>
+        <p v-if="error" class="alert alert-danger" role="alert">{{ error }}</p>
+        <p v-if="success" class="alert alert-success" role="status">{{ success }}</p>
+        <LoadingSpinner v-if="loading" />
+
+        <template v-else>
+            <div class="row g-3 text-center mb-4">
+                <button v-for="panel in panels" :key="panel.key" type="button" class="col btn border p-3 mx-2"
+                    :class="{ 'border-warning text-warning': panel.pending > 0, 'border-secondary': !panel.pending }"
+                    @click="activePanel = panel.key">
+                    <i :class="['fa-2x', 'fa-solid', panel.icon, panel.pending ? 'text-warning' : 'greenIcon']"></i>
+                    <span class="d-block mt-2">{{ panel.label }}</span>
+                    <strong v-if="panel.pending">{{ panel.pending }} à valider</strong>
+                </button>
             </div>
 
-            <!-- avis à valider-->
-            <div v-if="countNewAvis > 0" @click="showAvis = !showAvis"
-                class="mx-auto text-danger border border-4 rounded border-danger col-md-4 offset-md-1 py-5">
-                <i class="fa-5x fa-solid fa-comment mb-3"></i>
-                <p class="fs-3"><span class="fs-1">{{countNewAvis }}</span> avis à valider</p>
-            </div>
-            <!-- avis à jour-->
-            <div v-else @click="showAvis = !showAvis"
-                class="mx-auto border border-4 rounded border-secondary col-md-4 offset-md-1 py-5">
-                <i class="blueElement fa-5x fa-solid fa-comment mb-3"></i>
-                <p class="fs-3"><i class="fa-2x fa-solid fa-check greenIcon mb-3"></i>avis à jour</p>
-            </div>
-        </div>
-    </div>
+            <nav class="nav nav-pills justify-content-center mb-4" aria-label="Sections du back-office">
+                <button v-for="panel in panels" :key="panel.key" class="nav-link"
+                    :class="{ active: activePanel === panel.key }" @click="activePanel = panel.key">
+                    {{ panel.label }}
+                </button>
+            </nav>
 
-    <div class="container my-4" id="entities">
-        <div class="row">
-            <div @click="showLieux = !showLieux"
-                class="col-md-6 col-lg-4 col-xl-2 offset-xl-1 py-5 border border-secondary">
-                <i class="greenIcon fa-3x fa-solid fa-map-location-dot"></i>
-                <p class="fs-3">Lieux</p>
-            </div>
-            <div @click="showCategories = !showCategories"
-                class="col-md-6 col-lg-4 col-xl-2 py-5 border border-secondary">
-                <i class="greenIcon fa-solid fa-3x fa-rectangle-list"></i>
-                <p class="fs-3">Catégories</p>
-            </div>
-            <div @click="showAvis = !showAvis" class="col-md-6 col-lg-4 col-xl-2 py-5 border border-secondary">
-                <i class="greenIcon fa-solid fa-3x fa-pen"></i>
-                <p class="fs-3">Avis</p>
-            </div>
-            <div @click="showUsers = !showUsers" class="col-md-6 col-lg-4 col-xl-2 py-5 border border-secondary">
-                <i class="greenIcon fa-solid fa-3x fa-user"></i>
-                <p class="fs-3">Utilisateurs</p>
-            </div>
-            <div @click="showImages = !showImages" class="col-md-6 col-lg-4 col-xl-2 py-5 border border-secondary">
-                <i class="greenIcon fa-3x fa-solid fa-camera"></i>
-                <p class="fs-3">Images</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- modal de confirmation de suppression -->
-
-    <div class="modal" ref="confirmationModal" tabindex="-1" id="confirmationModal">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Demande de confirmation de suppression</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <section v-if="activePanel === 'categories'">
+                <h2>Gestion des catégories</h2>
+                <div class="table-responsive">
+                    <table class="table align-middle admin-table">
+                        <thead><tr><th>Catégorie</th><th>Créée le</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            <template v-for="category in categories" :key="category.id">
+                                <tr>
+                                    <td><span class="me-2" :style="{ color: category.color }" v-html="category.icon"></span>{{ category.name }}</td>
+                                    <td>{{ formatDate(category.created_at) }}</td>
+                                    <td class="text-nowrap">
+                                        <button class="btn btn-link p-0 me-3" @click="editCategory(category)" aria-label="Modifier la catégorie"><i class="fa-solid fa-pen-to-square greenIcon"></i></button>
+                                        <button class="btn btn-link text-danger p-0" @click="removeItem('categories', category)" aria-label="Supprimer la catégorie"><i class="fa-solid fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                                <tr v-if="editingCategory?.id === category.id">
+                                    <td colspan="3">
+                                        <form class="row g-2 align-items-end editor-row" @submit.prevent="saveCategory">
+                                            <div class="col-md-4"><label class="form-label">Nom</label><input v-model="editingCategory.name" class="form-control" required minlength="5" maxlength="50"></div>
+                                            <div class="col-md-4"><label class="form-label">Icône Font Awesome</label><input v-model="editingCategory.icon" class="form-control" required maxlength="50"></div>
+                                            <div class="col-md-2"><label class="form-label">Couleur</label><input v-model="editingCategory.color" class="form-control" required maxlength="15"></div>
+                                            <div class="col-md-2"><button class="btn greenButton me-2" :disabled="saving">Enregistrer</button><button type="button" class="btn btn-outline-secondary" @click="editingCategory = null">Annuler</button></div>
+                                            <div class="col-md-5"><label class="form-label">Image (JPG, 5 Mo max.)</label><input :ref="element => categoryImageInputs[category.id] = element" type="file" accept=".jpg,.jpeg,image/jpeg" class="form-control"></div>
+                                            <div class="col-md-2"><button type="button" class="btn blueButton" :disabled="saving" @click="uploadSelectedCategoryImage(category)">Changer l’image</button></div>
+                                            <div class="col-md-5"><img :src="editingCategory.image_url" :alt="`Image de ${editingCategory.name}`" class="category-preview"></div>
+                                        </form>
+                                    </td>
+                                </tr>
+                            </template>
+                            <tr v-if="!categories.length"><td colspan="3">Aucune catégorie.</td></tr>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="modal-body">
-                    <p>Etes-vous sûr de vouloir supprimer cet élément : {{ elementToDelete }} (id : {{
-                    idOfElementToDelete }}) ?</p>
-                    <p v-if="elementToDelete == 'category'" class="text-danger">Attention : tous les lieux associés à
-                        cette catégorie seront supprimés.</p>
+
+                <h3 class="mt-4">Ajouter une catégorie</h3>
+                <form class="row g-2 align-items-end" @submit.prevent="createCategory">
+                    <div class="col-md-4"><label class="form-label" for="categoryName">Nom</label><input id="categoryName" v-model="newCategory.name" class="form-control" required minlength="5" maxlength="50"></div>
+                    <div class="col-md-4"><label class="form-label" for="categoryIcon">Icône Font Awesome</label><input id="categoryIcon" v-model="newCategory.icon" class="form-control" required maxlength="50"></div>
+                    <div class="col-md-3"><label class="form-label" for="categoryColor">Couleur</label><input id="categoryColor" v-model="newCategory.color" class="form-control" required maxlength="15"></div>
+                    <div class="col-md-2"><button class="btn greenButton" type="submit" :disabled="saving">Ajouter</button></div>
+                    <div class="col-md-4"><label class="form-label" for="newCategoryImage">Image JPG (facultative)</label><input id="newCategoryImage" type="file" accept=".jpg,.jpeg,image/jpeg" class="form-control" @change="newCategoryImage = $event.target.files?.[0] ?? null"></div>
+                </form>
+            </section>
+
+            <section v-else-if="activePanel === 'places'">
+                <h2>Gestion des lieux et lieux proposés</h2>
+                <div class="table-responsive">
+                    <table class="table align-middle admin-table">
+                        <thead><tr><th>Lieu</th><th>Statut</th><th>Note</th><th>Ville</th><th>Auteur</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            <template v-for="place in places" :key="place.id">
+                                <tr>
+                                    <td><router-link :to="`/lieu/${place.id}`">{{ place.name }}</router-link></td>
+                                    <td><StatusBadge :status="place.status" /></td><td>{{ place.note }}</td>
+                                    <td>{{ place.city }} ({{ place.postcode }})</td><td>{{ place.user?.name || 'Compte supprimé' }}</td>
+                                    <td class="text-nowrap">
+                                        <button class="btn btn-link p-0 me-3" @click="editPlace(place)" aria-label="Modifier le lieu"><i class="fa-solid fa-pen-to-square greenIcon"></i></button>
+                                        <button class="btn btn-link text-danger p-0" @click="removeItem('places', place)" aria-label="Supprimer le lieu"><i class="fa-solid fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                                <tr v-if="editingPlace?.id === place.id">
+                                    <td colspan="6">
+                                        <form class="row g-2 editor-row" @submit.prevent="savePlace">
+                                            <div class="col-md-6"><label class="form-label">Nom</label><input v-model="editingPlace.name" class="form-control" required minlength="10" maxlength="100"></div>
+                                            <div class="col-md-3"><label class="form-label">Catégorie</label><select v-model="editingPlace.category_id" class="form-select" required><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select></div>
+                                            <div class="col-md-3"><label class="form-label">Statut</label><select v-model="editingPlace.status" class="form-select"><option v-for="status in placeStatuses" :key="status" :value="status">{{ status }}</option></select></div>
+                                            <div class="col-12"><label class="form-label">Description</label><textarea v-model="editingPlace.description" class="form-control" required minlength="25" maxlength="3000" rows="2"></textarea></div>
+                                            <div class="col-md-2"><label class="form-label">Latitude</label><input v-model.number="editingPlace.latitude" type="number" step="any" min="-90" max="90" class="form-control" required></div>
+                                            <div class="col-md-2"><label class="form-label">Longitude</label><input v-model.number="editingPlace.longitude" type="number" step="any" min="-180" max="180" class="form-control" required></div>
+                                            <div class="col-md-2"><label class="form-label">Note</label><input v-model.number="editingPlace.note" type="number" step="0.1" min="1" max="10" class="form-control" required></div>
+                                            <div class="col-md-2"><label class="form-label">Durée (h)</label><input v-model.number="editingPlace.time" type="number" min="1" max="24" class="form-control" required></div>
+                                            <div class="col-md-2"><label class="form-label">Difficulté</label><select v-model="editingPlace.difficulty" class="form-select"><option>famille</option><option>amateur</option><option>sportif</option></select></div>
+                                            <div class="col-md-2"><label class="form-label">Distance (km)</label><input v-model.number="editingPlace.kilometres" type="number" min="1" max="100" class="form-control"></div>
+                                            <div class="col-md-3"><label class="form-label">Département (ID)</label><input v-model.number="editingPlace.department_id" type="number" min="1" class="form-control" required></div>
+                                            <div class="col-md-3"><label class="form-label">Adresse</label><input v-model="editingPlace.adress" class="form-control" required minlength="5" maxlength="75"></div>
+                                            <div class="col-md-2"><label class="form-label">Code postal</label><input v-model="editingPlace.postcode" class="form-control" required pattern="[0-9A-Za-z]{5}" maxlength="5"></div>
+                                            <div class="col-md-4"><label class="form-label">Ville</label><input v-model="editingPlace.city" class="form-control" required minlength="3" maxlength="50"></div>
+                                            <div class="col-12"><label class="form-label">Message à l’auteur / raison d’un refus</label><textarea v-model="editingPlace.comment" class="form-control" maxlength="1000" rows="2" placeholder="Obligatoire pour demander une modification ou refuser"></textarea></div>
+                                            <div class="col-12"><button class="btn greenButton me-2" :disabled="saving">Enregistrer</button><button type="button" class="btn btn-outline-secondary" @click="editingPlace = null">Annuler</button></div>
+                                        </form>
+                                    </td>
+                                </tr>
+                            </template>
+                            <tr v-if="!places.length"><td colspan="6">Aucun lieu.</td></tr>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-success" data-bs-dismiss="modal"
-                        @click="handleDeleting()">Oui</button>
-                    <button type="button" class="btn btn-danger">Non</button>
+            </section>
+
+            <section v-else-if="activePanel === 'reviews'">
+                <h2>Gestion des avis proposés</h2>
+                <div class="table-responsive">
+                    <table class="table align-middle admin-table">
+                        <thead><tr><th>Lieu</th><th>Auteur</th><th>Note</th><th>Commentaire</th><th>Statut</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            <template v-for="review in reviews" :key="review.id">
+                                <tr>
+                                    <td>{{ review.place?.name || 'Lieu supprimé' }}</td><td>{{ review.user?.name || 'Compte supprimé' }}</td>
+                                    <td>{{ review.note }}/10</td><td>{{ review.comment || '—' }}</td><td><StatusBadge :status="review.status" /></td>
+                                    <td class="text-nowrap">
+                                        <button class="btn btn-link p-0 me-3" @click="editReview(review)" aria-label="Modifier l'avis"><i class="fa-solid fa-pen-to-square greenIcon"></i></button>
+                                        <button class="btn btn-link text-danger p-0" @click="removeItem('reviews', review)" aria-label="Supprimer l'avis"><i class="fa-solid fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                                <tr v-if="editingReview?.id === review.id">
+                                    <td colspan="6">
+                                        <form class="row g-2 align-items-end editor-row" @submit.prevent="saveReview">
+                                            <div class="col-md-2"><label class="form-label">Note</label><input v-model.number="editingReview.note" type="number" min="1" max="10" class="form-control" required></div>
+                                            <div class="col-md-3"><label class="form-label">Statut</label><select v-model="editingReview.status" class="form-select"><option v-for="status in reviewStatuses" :key="status" :value="status">{{ status }}</option></select></div>
+                                            <div class="col-md-5"><label class="form-label">Commentaire</label><input v-model="editingReview.comment" class="form-control" maxlength="2000"></div>
+                                            <div class="col-md-2"><button class="btn greenButton me-1" :disabled="saving">Enregistrer</button><button type="button" class="btn btn-outline-secondary" @click="editingReview = null">Annuler</button></div>
+                                        </form>
+                                    </td>
+                                </tr>
+                            </template>
+                            <tr v-if="!reviews.length"><td colspan="6">Aucun avis.</td></tr>
+                        </tbody>
+                    </table>
                 </div>
-            </div>
-        </div>
-    </div>
+            </section>
 
-
-    <section v-if="showLieux" class="container-fluid">
-
-        <h2 class="mb-2">Liste des lieux</h2>
-
-        <table class="table table-striped table-responsive">
-            <thead>
-                <tr>
-                    <th scope="col">id</th>
-                    <th scope="col">statut</th>
-                    <th scope="col">nom</th>
-                    <th scope="col">modifier</th>
-                    <th scope="col">supprimer</th>
-                    <th scope="col">description</th>
-                    <th scope="col">latitude</th>
-                    <th scope="col">longitude</th>
-                    <th scope="col">note</th>
-                    <th scope="col">temps</th>
-                    <th scope="col">difficulté</th>
-                    <th scope="col">kilomètres</th>
-                    <th scope="col">adresse</th>
-                    <th scope="col">code postal</th>
-                    <th scope="col">ville</th>
-                    <th scope="col">commentaire</th>
-                    <th scope="col">posté par</th>
-                    <th scope="col">ajouté le</th>
-                    <th scope="col">modifié le</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="lieu in lieux">
-                    <th scope="row">{{ lieu.id }}</th>
-                    <td v-if="lieu.statut == 'validé'" class="bg-success text-white">validé</td>
-                    <td v-else-if="lieu.statut == 'en attente'" class="bg-info text-white">en attente de validation
-                    </td>
-                    <td v-else-if="lieu.statut == 'à modifier'" class="bg-warning text-white">à modifier pour être
-                        validé
-                    </td>
-                    <td v-else class="bg-danger text-white">refusé</td>
-                    <td>{{ lieu.nom }}</td>
-                    <td>
-                        <router-link :to="`/modifierlieu/${lieu.id}`"><i class="fa-solid fa-pen-to-square fa-2x greenIcon"></i>
-                        </router-link>
-                    </td>
-                    <td><i class="fa-solid fa-eraser fa-2x text-danger" data-bs-toggle="modal" data-bs-target="#confirmationModal"
-                            @click="elementToDelete = 'lieu'; idOfElementToDelete = lieu.id"></i></td>
-                    <td>{{ lieu.description.substring(0, 100) }}</td>
-                    <td>{{ lieu.latitude }}</td>
-                    <td>{{ lieu.longitude }}</td>
-                    <td>{{ lieu.note }}</td>
-                    <td>{{ lieu.temps }}</td>
-                    <td>{{ lieu.difficulte }}</td>
-                    <td>{{ lieu.kilometres }}</td>
-                    <td>{{ lieu.adresse }}</td>
-                    <td>{{ lieu.code_postal }}</td>
-                    <td>{{ lieu.ville }}</td>
-                    <td>{{ lieu.commentaire ? lieu.commentaire : "aucun" }}</td>
-                    <td>{{ lieu.user ? lieu.user.pseudo : 'utilisateur supprimé'}}</td>
-                    <td>{{ moment(lieu.created_at).format("ddd DD MMM YYYY [à] HH:mm") }}</td>
-                    <td> {{ lieu.created_at == lieu.updated_at ? "jamais modifié" :
-                    moment(avis.updated_at).format("ddd DD MMM YYYY [à] HH:mm")
-                    
-                    }}</td>
-                </tr>
-
-            </tbody>
-        </table>
-    </section>
-
-    <section v-if="showCategories" class="container-fluid p-3 p-lg-5">
-
-        <h2 class="mb-3">Liste des catégories</h2>
-
-        <div class="container">
-            <table class="table table-striped table-responsive">
-                <thead>
-                    <tr>
-                        <th scope="col">id</th>
-                        <th scope="col">nom</th>
-                        <th scope="col">icône</th>
-                        <th scope="col">ajoutée le</th>
-                        <th scope="col">modifiée le</th>
-                        <th scope="col">modifier</th>
-                        <th scope="col">supprimer</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="category in categories">
-                        <th scope="row">{{ category.id }}</th>
-                        <td>{{ category.nom }}</td>
-                        <td><span class="fa-2x iconWithShadow me-2" v-html="category.icone"
-                                :style="{color: category.couleur}"></span></td>
-                        <td>{{ moment(category.created_at).format("ddd DD MMM YYYY [à] HH:mm") }}</td>
-                        <td> {{ category.created_at == category.updated_at ? "jamais modifiée" :
-                        moment(category.updated_at).format("ddd DD MMM YYYY [à] HH:mm")
-                        
-                        }}</td>
-                        <td>
-                            <router-link :to="`/modifiercategorie/${category.id}`">
-                                <i class="fa-solid fa-pen-to-square fa-2x greenIcon"></i>
-                            </router-link>
-                        </td>
-                        <td><i class="fa-solid fa-eraser fa-2x text-danger" data-bs-toggle="modal" data-bs-target="#confirmationModal"
-                                @click="elementToDelete = 'category'; idOfElementToDelete = categorie.id"></i></td>
-                    </tr>
-
-                </tbody>
-            </table>
-        </div>
-
-        <h2 class="mt-5">Ajouter une catégorie</h2>
-
-        <div class="row justify-content-center p-2 p-lg-5">
-
-            <ValidationErrors :errors="validationErrors" v-if="validationErrors" />
-
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header text-white mb-3">Entrez ici les informations</div>
-
-                    <div class="card-body">
-
-                        <form @submit.prevent="storeCategory">
-
-                            <div class="form-group row m-2">
-                                <label for="nom" class="col-md-4 col-form-label text-md-right">nom</label>
-
-                                <div class="col-md-6">
-                                    <input v-model="nom" id="nom" type="text" class="form-control" name="nom" required
-                                        autocomplete="nom">
-                                </div>
-                            </div>
-
-                            <div class="form-group row m-2">
-                                <label for="icone" class="col-md-4 col-form-label text-md-right">icône</label>
-
-                                <div class="col-md-6">
-                                    <input v-model="icone" id="icone" type="text" class="form-control" name="icone"
-                                        required autocomplete="icone">
-                                </div>
-                            </div>
-
-                            <div class="form-group row m-2">
-                                <label for="couleur" class="col-md-4 col-form-label text-md-right">couleur</label>
-
-                                <div class="col-md-6">
-                                    <input v-model="couleur" id="couleur" type="text" class="form-control"
-                                        name="couleur" required autocomplete="couleur">
-                                </div>
-                            </div>
-
-                            <div class="form-group row mt-3 text-center">
-                                <div class="col-md-6 offset-md-3">
-                                    <button type="submit" class="btn btn-lg rounded-pill text-light greenButton">
-                                        Valider
-                                    </button>
-                                </div>
-                            </div>
-
-                        </form>
-                    </div>
+            <section v-else-if="activePanel === 'images'">
+                <h2>Gestion des images et images proposées</h2>
+                <div class="table-responsive">
+                    <table class="table align-middle admin-table">
+                        <thead><tr><th>Aperçu</th><th>Lieu</th><th>Auteur</th><th>Statut</th><th>Couverture</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            <tr v-for="image in images" :key="image.id">
+                                <td><img :src="`/images/${image.name}`" :alt="image.name" class="admin-image"></td>
+                                <td>{{ image.place?.name || '—' }}</td><td>{{ image.user?.name || 'Compte supprimé' }}</td>
+                                <td><StatusBadge :status="image.status" /></td>
+                                <td><input v-model="image.cover" type="checkbox" class="form-check-input" :aria-label="`Image de couverture ${image.name}`"></td>
+                                <td class="text-nowrap">
+                                    <select v-model="image.status" class="form-select form-select-sm d-inline-block status-select" :aria-label="`Statut ${image.name}`"><option v-for="status in imageStatuses" :key="status" :value="status">{{ status }}</option></select>
+                                    <button class="btn btn-link p-0 mx-2" @click="saveImage(image)" aria-label="Enregistrer l'image"><i class="fa-solid fa-floppy-disk greenIcon"></i></button>
+                                    <button class="btn btn-link text-danger p-0" @click="removeItem('images', image)" aria-label="Supprimer l'image"><i class="fa-solid fa-trash"></i></button>
+                                </td>
+                            </tr>
+                            <tr v-if="!images.length"><td colspan="6">Aucune image.</td></tr>
+                        </tbody>
+                    </table>
                 </div>
-            </div>
-        </div>
+            </section>
 
-    </section>
-
-    <section v-if="showAvis" class="container-fluid p-3 p-lg-5">
-
-        <h2 class="mb-2">Liste des avis</h2>
-
-        <div class="container">
-            <table class="table table-striped table-responsive">
-                <thead>
-                    <tr>
-                        <th scope="col">id</th>
-                        <th scope="col">statut</th>
-                        <th scope="col">utilisateur</th>
-                        <th scope="col">lieu</th>
-                        <th scope="col">note</th>
-                        <th scope="col">commentaire</th>
-                        <th scope="col">date de création</th>
-                        <th scope="col">date de modification</th>
-                        <th scope="col">modifier</th>
-                        <th scope="col">supprimer</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="avis in avis">
-                        <th scope="row">{{ avis.id }}</th>
-                        <td v-if="avis.statut == 'validé'" class="bg-success text-white">validé</td>
-                        <td v-else-if="avis.statut == 'en attente'" class="bg-info text-white">en attente de
-                            validation
-                        </td>
-                        <td v-else class="bg-danger text-white">refusé</td>
-                        <td>{{ avis.user ? avis.user.pseudo : "utilisateur supprimé" }}</td>
-                        <td>{{ avis.lieu.nom }}</td>
-                        <td>{{ avis.note }}</td>
-                        <td v-if="avis.commentaire">{{ avis.commentaire.substring(0, 60) }}</td>
-                        <td v-else>aucun</td>
-                        <td>{{ moment(avis.created_at).format("ddd DD MMM YYYY [à] HH:mm") }}</td>
-                        <td> {{ avis.created_at == avis.updated_at ? "jamais modifié" :
-                        moment(avis.updated_at).format("ddd DD MMM YYYY [à] HH:mm")
-                        
-                        }}</td>
-                        <td>
-                            <router-link :to="`/modifieravis/${avis.id}`"><i class="fa-solid fa-pen-to-square fa-2x greenIcon"></i>
-                            </router-link>
-                        </td>
-                        <td><i class="fa-solid fa-eraser fa-2x text-danger" data-bs-toggle="modal" data-bs-target="#confirmationModal"
-                                @click="elementToDelete = 'avis'; idOfElementToDelete = avis.id"></i></td>
-                    </tr>
-
-                </tbody>
-            </table>
-        </div>
-
-    </section>
-
-    <section v-if="showUsers" class="container-fluid p-3 p-lg-5">
-
-        <h2 class="mb-2">Liste des utilisateurs</h2>
-
-        <div class="container">
-            <table class="table table-striped table-responsive">
-                <thead>
-                    <tr>
-                        <th scope="col">id</th>
-                        <th scope="col">pseudo</th>
-                        <th scope="col">email</th>
-                        <th scope="col">role</th>
-                        <th scope="col">inscrit le</th>
-                        <th scope="col">modifié le</th>
-                        <th scope="col">supprimer le compte</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="user in users">
-                        <th scope="row">{{ user.id }}</th>
-                        <td>{{ user.pseudo }}</td>
-                        <td>{{ user.email }}</td>
-                        <td>{{ user.role.role }}</td>
-                        <td>{{ moment(user.created_at).format("ddd DD MMM YYYY [à] HH:mm") }}</td>
-                        <td> {{ user.created_at == user.updated_at ? "jamais modifié" :
-                        moment(user.updated_at).format("ddd DD MMM YYYY [à] HH:mm")
-                        
-                        }}</td>
-                        <td><i class="fa-solid fa-eraser fa-2x text-danger" data-bs-toggle="modal" data-bs-target="#confirmationModal"
-                                @click="elementToDelete = 'user'; idOfElementToDelete = user.id"></i></td>
-                    </tr>
-
-                </tbody>
-            </table>
-        </div>
-
-    </section>
-
-    <section v-if="showImages" class="container-fluid  p-3 p-lg-5">
-        <h2 class="mb-2">Liste des images</h2>
-
-        <table class="table table-striped table-responsive">
-            <thead>
-                <tr>
-                    <th scope="col">aperçu</th>
-                    <th scope="col">statut</th>
-                    <th scope="col">id</th>
-                    <th scope="col">nom</th>
-                    <th scope="col">postée par</th>
-                    <th scope="col">mise en avant</th>
-                    <th scope="col">longueur</th>
-                    <th scope="col">largeur</th>
-                    <th scope="col">taille</th>
-                    <th scope="col">ajoutée le</th>
-                    <th scope="col">modifier</th>
-                    <th scope="col">supprimer</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="image in images">
-                    <td>
-                        <button class="m-3" data-bs-toggle="modal" :data-bs-target="`.imageZoom${image.id}`"
-                            style="border: none; outline:none">
-                            <img v-if="image.lieu_id !== null" class="w-75" :src="`/images/${image.nom}`"
-                                :alt="`${image.nom}`">
-                            <img v-else class="w-75" :src="`/images/categorie${image.id}.jpg`" :alt="`${image.nom}`">
-                        </button>
-                    </td>
-                    <td v-if="image.statut == 'validée'" class="bg-success text-white">validée</td>
-                    <td v-else-if="image.statut == 'en attente'" class="bg-info">en attente de validation
-                    </td>
-                    <td v-else class="bg-danger text-white">refusée</td>
-                    <td>{{ image.id }}</td>
-                    <td>{{ image.nom }}</td>
-                    <td>{{ image.user ? image.user.pseudo : 'utilisateur supprimé'}}</td>
-                    <td>{{ image.mise_en_avant ? 'oui' : 'non' }}</td>
-                    <td>{{ image.longueur }} px</td>
-                    <td>{{ image.largeur }} px</td>
-                    <td>{{ image.taille }} kb</td>
-                    <td>{{ moment(image.created_at).format("ddd DD MMM YYYY [à] HH:mm") }}</td>
-                    <td>
-                        <router-link :to="`/modifierimage/${image.id}`"><i class="fa-solid fa-pen-to-square fa-2x greenIcon"></i>
-                        </router-link>
-                    </td>
-                    <td><i class="fa-solid fa-eraser fa-2x text-danger" data-bs-toggle="modal" data-bs-target="#confirmationModal"
-                            @click="elementToDelete = 'image'; idOfElementToDelete = image.id"></i></td>
-
-                    <!-- modal pour afficher l'image en grand -->
-                    <div :class="`modal fade imageZoom${image.id}`" tabindex="-1" role="dialog"
-                        aria-labelledby="myLargeModalLabel" aria-hidden="true">
-                        <div class="modal-dialog modal-xl">
-                            <div class="modal-body w-100">
-                                <img v-if="image.lieu_id" class="w-100" :src="`/images/${image.nom}`"
-                                    :alt="`${image.nom}`">
-                                <img v-else class="w-100" :src="`/images/categorie${image.id}.jpg`"
-                                    :alt="`${image.nom}`">
-                            </div>
-                        </div>
-                    </div>
-                </tr>
-            </tbody>
-        </table>
-    </section>
-
+            <section v-else-if="activePanel === 'users'">
+                <h2>Gestion des utilisateurs</h2>
+                <div class="table-responsive">
+                    <table class="table align-middle admin-table">
+                        <thead><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Inscription</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            <tr v-for="user in users" :key="user.id">
+                                <td>{{ user.name }}</td><td>{{ user.email }}</td><td>{{ user.role?.name }}</td>
+                                <td>{{ formatDate(user.created_at) }}</td>
+                                <td><button v-if="Number(user.id) !== Number(userStore.id)" class="btn btn-link text-danger p-0" @click="removeItem('users', user)" aria-label="Supprimer l'utilisateur"><i class="fa-solid fa-trash"></i></button></td>
+                            </tr>
+                            <tr v-if="!users.length"><td colspan="5">Aucun utilisateur.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </template>
+    </main>
 </template>
 
-<script>
-import moment from 'moment';
-import axios from "axios";
-import { mapWritableState } from 'pinia';
-import { mapActions } from 'pinia';
-import { useBackOfficeStore } from '../../stores/backOfficeStore'
-import { usePlacesStore } from '../../stores/placesStore';
-import ValidationErrors from '../utilities/ValidationErrors.vue'
+<script setup>
+import axios from "axios"
+import { computed, defineComponent, h, onMounted, reactive, ref } from "vue"
+import { useUserStore } from "../../stores/userStore"
+import { usePlacesStore } from "../../stores/placesStore"
+import LoadingSpinner from "../utilities/LoadingSpinner.vue"
 
-moment.locale('fr');
+const StatusBadge = defineComponent({
+    props: { status: { type: String, required: true } },
+    setup(props) {
+        const statusClass = computed(() => {
+            const value = props.status.toLocaleLowerCase("fr")
+            if (value.includes("attente")) return "status-pending"
+            if (value.includes("modifier")) return "status-changes"
+            if (value.includes("refus")) return "status-rejected"
+            if (value.includes("valid")) return "status-approved"
+            return "status-neutral"
+        })
+        return () => h("span", { class: ["status-badge", statusClass.value] }, [
+            h("span", { class: "status-dot", "aria-hidden": "true" }),
+            props.status
+        ])
+    }
+})
 
-export default {
-    // computed permet de surveiller automatiquement les changements
-    // des variables dans le state => automatiquement à jour en cas
-    // d'ajout / suppression / modif de lieu et/ou de catégorie
+const userStore = useUserStore()
+const placesStore = usePlacesStore()
+const isAdmin = computed(() => Number(userStore.roleId) === 2 || (!userStore.roleId && userStore.role === "admin"))
+const loading = ref(true)
+const saving = ref(false)
+const error = ref("")
+const success = ref("")
+const activePanel = ref("places")
+const places = ref([])
+const categories = ref([])
+const reviews = ref([])
+const users = ref([])
+const images = ref([])
+const editingCategory = ref(null)
+const editingPlace = ref(null)
+const editingReview = ref(null)
+const categoryImageInputs = ref({})
+const newCategoryImage = ref(null)
+const newCategory = reactive({ name: "", icon: "", color: "" })
+const placeStatuses = ["en attente", "validé", "à modifier", "refusé"]
+const reviewStatuses = ["en attente", "validé", "refusé"]
+const imageStatuses = ["en attente", "validée", "refusée"]
 
-    computed: {
-        ...mapWritableState(useBackOfficeStore, ['avis', 'users', 'images']),
+const panels = computed(() => [
+    { key: "categories", label: "Catégories", icon: "fa-rectangle-list", pending: 0 },
+    { key: "places", label: "Lieux", icon: "fa-location-dot", pending: places.value.filter(place => place.status === "en attente" || place.status === "à modifier").length },
+    { key: "reviews", label: "Avis", icon: "fa-pen", pending: reviews.value.filter(review => review.status === "en attente").length },
+    { key: "images", label: "Images", icon: "fa-camera", pending: images.value.filter(image => image.status === "en attente").length },
+    { key: "users", label: "Utilisateurs", icon: "fa-user", pending: 0 }
+])
 
-        ...mapWritableState(usePlacesStore, [
-            'lieux',
-            'categories'
-        ]),
-
-        // renvoie le nombre d'images avec statut "en attente"
-        countNewImages() {
-            if (this.images) {
-                return this.images.filter(image => image.statut == "en attente").length
-            }
-        },
-
-        // renvoie le nombre de lieux avec statut "en attente" ou "à modifier"
-        countNewLieux() {
-            if (this.lieux) {
-                return this.lieux.filter(lieu => lieu.statut == "en attente" | lieu.statut == "à modifier").length
-            }
-        },
-
-        // renvoie le nombre d'images avec statut "en attente"
-        countNewAvis() {
-            if (this.avis) {
-                return this.avis.filter(avi => avi.statut == "en attente").length
-            }
-        },
-
-    },
-
-    data() {
-        return {
-            // nom - icône - couleur : pour création catégorie
-            nom: "",
-            icone: "",
-            couleur: "",
-            showConfirm: false,
-            showUsers: false,
-            showLieux: false,
-            showCategories: false,
-            showAvis: false,
-            showImages: false,
-            elementToDelete: '',
-            idOfElementToDelete: '',
-            validationErrors: ''
-        }
-    },
-
-    components: { ValidationErrors },
-
-    methods: {
-
-        ...mapActions(useBackOfficeStore, ['storeAvis', 'storeUsers', 'storeImages']),
-
-        ...mapActions(usePlacesStore, ['storeLieux', 'storeCategories']),
-
-        showModal() {
-            this.showConfirm = true;
-            this.$nextTick(() => {
-                this.$refs.confirmationModal.modal('show');
-            });
-        },
-
-        handleDeleting() {
-            switch (this.elementToDelete) {
-                case ('user'):
-                    this.deleteUser(this.idOfElementToDelete)
-                    break
-                case ('lieu'):
-                    this.deleteLieu(this.idOfElementToDelete)
-                    break
-                case ('avis'):
-                    this.deleteReview(this.idOfElementToDelete)
-                    break
-                case ('image'):
-                    this.deleteImage(this.idOfElementToDelete)
-                    break
-                case ('categorie'):
-                    this.deleteCategory(this.idOfElementToDelete)
-                    break
-            }
-        },
-
-        deleteReview(id) {
-
-            axios.delete("/api/avis/" + id)
-
-                .then(response => {
-
-                    let message = response.data.message
-
-                    // une fois l'avis supprimé, on le retire des avis du store
-                    // cela permet d'éviter un appel api qui récupérerait tous les avis alors qu'un seul a changé
-                    let index = this.avis.findIndex(avi => avi.id == id)
-                    this.avis.splice(index, 1)
-
-                    // on sauvegarde la nouvelle liste dans le store
-                    this.storeAvis(this.avis)
-
-                    // on redirige vers l'accueil en affichant le message de succès
-                    this.$router.push('/successmessage/backoffice/' + message)
-
-                }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-                })
-        },
-
-        deleteLieu(id) {
-
-            axios.delete("/api/places/" + id)
-                .then(response => {
-
-                    let message = response.data.message
-
-                    // même principe que pour les avis ci-dessus
-                    let index = this.lieux.findIndex(lieu => lieu.id == id)
-                    this.lieux.splice(index, 1)
-
-                    // on sauvegarde la nouvelle liste dans le store
-                    this.storeLieux(this.lieux)
-
-                    // on redirige vers l'accueil en affichant le message de succès
-                    this.$router.push('/successmessagebackoffice/' + message)
-
-                }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-                })
-        },
-
-        deleteCategory(id) {
-
-            axios.delete("/api/categories/" + id)
-
-                .then(response => {
-
-                    let message = response.data.message
-
-                    // même principe que pour les avis ci-dessus
-                    let index = this.categories.findIndex(category=> categorie.id == id)
-                    this.categories.splice(index, 1)
-
-                    // on sauvegarde la nouvelle liste dans le store
-                    this.storeCategories(this.categories)
-
-                    // on redirige vers l'accueil en affichant le message de succès
-                    this.$router.push('/successmessagebackoffice/' + message)
-
-                }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-                })
-        },
-
-        storeCategory() {
-            axios.post('/api/categories', { nom: this.nom, icone: this.icone, couleur: this.couleur })
-                .then(response => {
-                    let message = response.data.message
-
-                    // on ajoute la nouvelle catégorie à la liste, qu'on sauvegarde dans le store
-                    // cela évite de faire un appel API
-                    this.categories.push(response.data.data)
-                    this.storeCategories(this.categories)
-
-                    // on redirige vers le back-office en affichant le message de succès
-                    this.$router.push('/successmessagebackoffice/' + message)
-
-                }).catch((error) => {
-                    this.validationErrors = error.response.data.errors;
-                })
-        },
-
-        deleteUser(id) {
-
-            axios.delete("/api/users/" + id)
-
-                .then(response => {
-
-                    let message = response.data.message
-
-                    // même principe que pour les avis ci-dessus
-                    let index = this.users.findIndex(user => user.id == id)
-                    this.users.splice(index, 1)
-
-                    // on sauvegarde la nouvelle liste dans le store
-                    this.storeUsers(this.users)
-
-                    // on redirige vers l'accueil en affichant le message de succès
-                    this.$router.push('/successmessagebackoffice/' + message)
-
-                }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-                })
-        },
-
-        deleteImage(id) {
-
-            axios.delete("/api/images/" + id)
-
-                .then(response => {
-
-                    let message = response.data.message
-
-                    // même principe que pour les avis ci-dessus
-                    let index = this.images.findIndex(image => image.id == id)
-                    this.images.splice(index, 1)
-
-                    // on sauvegarde la nouvelle liste dans le store
-                    this.storeImages(this.images)
-
-                    // on redirige vers l'accueil en affichant le message de succès
-                    this.$router.push('/successmessagebackoffice/' + message)
-
-                }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-                })
-        },
-
-        getLieux() { // on récupère tous les lieux même les non validés. Ils remplacent la liste de lieux "normaux" (uniquement ceux validés).
-            axios.get("/api/getallplaces")
-                .then(response => {
-                    this.storeLieux(response.data.data)
-                }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-                })
-        },
-
-        getAvis() {
-            axios.get("/api/avis")
-                .then(response => {
-                    this.storeAvis(response.data.data)
-                }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-                })
-        },
-
-        getUsers() {
-            axios.get("/api/users")
-                .then(response => {
-                    this.storeUsers(response.data.data)
-                }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-                })
-        },
-
-        getImages() {
+const loadData = async () => {
+    try {
+        const [placeResponse, categoryResponse, reviewResponse, userResponse, imageResponse] = await Promise.all([
+            axios.get("/api/getallplaces"),
+            axios.get("/api/categories"),
+            axios.get("/api/reviews"),
+            axios.get("/api/users"),
             axios.get("/api/images")
-                .then(response => {
-                    this.storeImages(response.data.data)
-                }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-                })
-        }
-    },
-
-    created() {
-        // on initialise moment pour afficher la date en français
-        this.moment = moment
-
-        // on récupère lieux / avis / images / users (catégories déjà récupérées sur App.vue)
-        this.getLieux()
-        this.getAvis()
-        this.getImages()
-        this.getUsers()
+        ])
+        places.value = placeResponse.data.data
+        categories.value = categoryResponse.data.data
+        placesStore.storeCategories(categories.value)
+        reviews.value = reviewResponse.data.data
+        users.value = userResponse.data.data
+        images.value = imageResponse.data.data
+    } catch (requestError) {
+        error.value = requestError.response?.status === 403
+            ? "Votre compte ne dispose pas des droits nécessaires pour consulter le back-office."
+            : "Impossible de charger les données du back-office. Vérifiez votre connexion et vos droits d'accès."
+    } finally {
+        loading.value = false
     }
 }
+
+const formatDate = value => value ? new Date(value).toLocaleDateString("fr-FR") : "—"
+const clearFeedback = () => { error.value = ""; success.value = "" }
+const showRequestError = (requestError, fallback) => {
+    error.value = requestError.response?.data?.errors
+        ? Object.values(requestError.response.data.errors).flat().join(" ")
+        : requestError.response?.data?.message || fallback
+}
+
+const editCategory = category => {
+    clearFeedback()
+    editingCategory.value = { ...category }
+}
+const saveCategory = async () => {
+    saving.value = true
+    clearFeedback()
+    try {
+        const response = await axios.put(`/api/categories/${editingCategory.value.id}`, editingCategory.value)
+        const index = categories.value.findIndex(category => category.id === response.data.data.id)
+        categories.value.splice(index, 1, response.data.data)
+        placesStore.storeCategories(categories.value)
+        editingCategory.value = null
+        success.value = response.data.message
+    } catch (requestError) {
+        showRequestError(requestError, "Impossible de modifier la catégorie.")
+    } finally {
+        saving.value = false
+    }
+}
+
+const uploadCategoryImage = async (category, file) => {
+    if (!file) {
+        clearFeedback()
+        error.value = "Choisissez une image JPG avant de l’envoyer."
+        return false
+    }
+
+    saving.value = true
+    clearFeedback()
+    const formData = new FormData()
+    formData.append("image", file)
+    try {
+        const response = await axios.post(`/api/categories/${category.id}/image`, formData)
+        const index = categories.value.findIndex(entry => entry.id === category.id)
+        if (index !== -1) categories.value.splice(index, 1, response.data.data)
+        placesStore.storeCategories(categories.value)
+        if (editingCategory.value?.id === category.id) editingCategory.value.image_url = response.data.data.image_url
+        success.value = response.data.message
+        return true
+    } catch (requestError) {
+        showRequestError(requestError, "Impossible de modifier l’image de la catégorie.")
+        return false
+    } finally {
+        saving.value = false
+    }
+}
+
+const uploadSelectedCategoryImage = async category => {
+    const input = categoryImageInputs.value[category.id]
+    if (await uploadCategoryImage(category, input?.files?.[0]) && input) input.value = ""
+}
+
+const editPlace = place => {
+    clearFeedback()
+    editingPlace.value = {
+        ...place,
+        category_id: place.category_id ?? place.category?.id
+    }
+}
+
+const savePlace = async () => {
+    if (["à modifier", "refusé"].includes(editingPlace.value.status) && !editingPlace.value.comment?.trim()) {
+        error.value = "Ajoutez un message pour demander des modifications ou refuser ce lieu."
+        return
+    }
+    saving.value = true
+    clearFeedback()
+    try {
+        const response = await axios.put(`/api/places/${editingPlace.value.id}`, editingPlace.value)
+        const index = places.value.findIndex(place => place.id === response.data.data.id)
+        places.value.splice(index, 1, response.data.data)
+        editingPlace.value = null
+        success.value = response.data.message
+    } catch (requestError) {
+        showRequestError(requestError, "Impossible d'enregistrer le lieu.")
+    } finally {
+        saving.value = false
+    }
+}
+
+const editReview = review => {
+    clearFeedback()
+    editingReview.value = { ...review }
+}
+const saveReview = async () => {
+    saving.value = true
+    clearFeedback()
+    try {
+        const response = await axios.put(`/api/reviews/${editingReview.value.id}`, editingReview.value)
+        const index = reviews.value.findIndex(review => review.id === response.data.data.id)
+        reviews.value.splice(index, 1, response.data.data)
+        editingReview.value = null
+        success.value = response.data.message
+    } catch (requestError) {
+        showRequestError(requestError, "Impossible d'enregistrer l'avis.")
+    } finally {
+        saving.value = false
+    }
+}
+
+const saveImage = async image => {
+    clearFeedback()
+    try {
+        const response = await axios.put(`/api/images/${image.id}`, { cover: image.cover, status: image.status })
+        const index = images.value.findIndex(entry => entry.id === image.id)
+        images.value.splice(index, 1, response.data.data)
+        success.value = response.data.message
+    } catch (requestError) {
+        showRequestError(requestError, "Impossible d'enregistrer l'image.")
+    }
+}
+
+const removeItem = async (resource, item) => {
+    const labels = { places: "ce lieu", categories: "cette catégorie et ses lieux", reviews: "cet avis", users: "cet utilisateur", images: "cette image" }
+    if (!window.confirm(`Supprimer ${labels[resource]} ?`)) return
+
+    clearFeedback()
+    try {
+        await axios.delete(`/api/${resource}/${item.id}`)
+        const collections = { places, categories, reviews, users, images }
+        collections[resource].value = collections[resource].value.filter(entry => entry.id !== item.id)
+        if (resource === "categories") placesStore.storeCategories(categories.value)
+        success.value = "Élément supprimé."
+    } catch (requestError) {
+        showRequestError(requestError, "Impossible de supprimer cet élément.")
+    }
+}
+
+const createCategory = async () => {
+    saving.value = true
+    clearFeedback()
+    try {
+        const imageFile = newCategoryImage.value
+        const response = await axios.post("/api/categories", { ...newCategory })
+        categories.value.push(response.data.data)
+        placesStore.storeCategories(categories.value)
+        Object.assign(newCategory, { name: "", icon: "", color: "" })
+        newCategoryImage.value = null
+        const imageInput = document.getElementById("newCategoryImage")
+        if (imageInput) imageInput.value = ""
+        if (imageFile) {
+            const imageSaved = await uploadCategoryImage(response.data.data, imageFile)
+            if (!imageSaved) {
+                success.value = "Catégorie créée; son image n’a pas pu être enregistrée."
+                return
+            }
+        } else {
+            success.value = response.data.message
+        }
+    } catch (requestError) {
+        showRequestError(requestError, "Impossible de créer la catégorie.")
+    } finally {
+        saving.value = false
+    }
+}
+
+onMounted(() => {
+    if (isAdmin.value) loadData()
+    else loading.value = false
+})
 </script>
 
 <style scoped>
-.card-header,
-#entities p {
-    color: #1c6e8c
+.admin-table {
+    --bs-table-striped-bg: transparent;
+    --bs-table-bg: #fff;
+    border-color: #b7d9de;
 }
 
-@media screen and (max-width: 1200px) {
-    img {
-        width: 30vw !important
-    }
+.admin-table tbody tr:nth-child(even) > * {
+    background-color: #e8f3f4;
+}
+
+.admin-table tbody tr:hover > * {
+    background-color: #d6ebed;
+}
+
+.editor-row {
+    padding: 1rem;
+    border-left: 4px solid #94d1be;
+    background: #f0f8f6;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    background-color: currentColor;
+}
+
+.status-pending { color: #7a5700; background-color: #fff0bf; }
+.status-changes { color: #80500a; background-color: #ffe2b8; }
+.status-rejected { color: #8e2632; background-color: #f8d7da; }
+.status-approved { color: #17613f; background-color: #d6f1e4; }
+.status-neutral { color: #435b64; background-color: #e6ecee; }
+
+.admin-image {
+    max-width: 100px;
+    max-height: 70px;
+    object-fit: contain;
+}
+
+.category-preview {
+    max-width: 100%;
+    max-height: 120px;
+    object-fit: cover;
+    border-radius: 0.25rem;
+}
+
+.status-select {
+    max-width: 130px;
 }
 </style>

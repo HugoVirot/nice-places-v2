@@ -47,7 +47,7 @@ class Place extends Model
 
     public function cover_image()
     {
-        return $this->hasMany(Image::class)->where('cover', true);
+        return $this->hasMany(Image::class)->where('cover', true)->where('status', 'validée');
     }
 
     public function notifications()
@@ -62,6 +62,6 @@ class Place extends Model
      */
     protected $fillable = [
         'name', 'description', 'latitude', 'longitude', 'note', 'time', 'difficulty', 'category_id',
-        'kilometres', 'department_id', 'adres', 'postcode', 'city', 'user_id', 'status', 'comment'
+        'kilometres', 'department_id', 'adress', 'postcode', 'city', 'user_id', 'status', 'comment'
     ];
 }

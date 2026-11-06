@@ -6,30 +6,47 @@ import Footer from "./components/template/Footer.vue"
 import { useUserStore } from './stores/userStore'
 import { usePlacesStore } from './stores/placesStore'
 import axios from "axios"
-import { onBeforeMount, onMounted, watch, ref } from "vue"
+import { onBeforeMount, watch, ref } from "vue"
   import { storeToRefs } from 'pinia'
 
 const userStore = useUserStore()
 const placesStore = usePlacesStore()
 
-const { department } = storeToRefs(userStore)
-const { id } = storeToRefs(userStore)
+const { department, userPosition } = storeToRefs(userStore)
 //const { places } = storeToRefs(placesStore)
 
 const loading = ref(true)
+const nearbyRadiusKm = 50
 
-// ERREUR WATCH : invalid watch source:  <empty string> A watch source can only be a getter/effect function, a ref, a reactive object, or an array of these types. 
-//at <App>
-// // on surveille le choix d'un département ou le changement de département de l'utilisateur
-// // si c'est le cas => on récupère les 3 derniers places et les 3 mieux notés du nouveau département
-watch(department, () => getThreeTopAndLastPlaces())
+const distanceInKm = (place, position) => {
+	const latitude = Number(place.latitude)
+	const longitude = Number(place.longitude)
+	const userLatitude = Number(position.latitude)
+	const userLongitude = Number(position.longitude)
 
-// // on surveille également le changement d'id et donc d'utilisateur
-watch(id, () => getThreeTopAndLastPlaces())
+	if (![latitude, longitude, userLatitude, userLongitude].every(Number.isFinite)) {
+		return null
+	}
 
-// // et les lieux (permet de récupérer les 3 derniers lieux / 3 top lieux au 1er chargement de App)
-//watch(places, () => getThreeTopAndLastPlaces())
+	const toRadians = degrees => degrees * Math.PI / 180
+	const latitudeDifference = toRadians(userLatitude - latitude)
+	const longitudeDifference = toRadians(userLongitude - longitude)
+	const haversine = Math.sin(latitudeDifference / 2) ** 2
+		+ Math.cos(toRadians(latitude)) * Math.cos(toRadians(userLatitude))
+		* Math.sin(longitudeDifference / 2) ** 2
 
+	return 6371 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine))
+}
+
+const getPlaceImageStyle = place => {
+	const imageName = place.cover_image?.[0]?.name || 'defaultpicture.jpg'
+
+	return {
+		backgroundImage: `url("/images/${encodeURIComponent(imageName)}")`,
+		backgroundPosition: 'center',
+		backgroundSize: 'cover'
+	}
+}
 
 // on récupère les catégories et on les stocke dans le store, idem ensuite pour places/départements/régions/favoris
 const getCategories = () => {
@@ -70,35 +87,50 @@ const getRegions = () => {
 
 // ***************** on récupère les 3 endroits les mieux notés + les 3 derniers postés ****************
 const getThreeTopAndLastPlaces = () => {
-
-	let filteredPlacesList
-
-	// si l'utilisateur a choisi un département
-	if (department) {
-		// on filtre l'ensemble des places pour ne garder que ceux du département de l'utilisateur
-		filteredPlacesList = placesStore.places.filter(place => place.department.id == department.id)
-
-		//sinon => on cible la France entière
-	} else {
-		filteredPlacesList = placesStore.places
+	if (!Array.isArray(placesStore.places)) {
+		placesStore.storeThreeTopPlaces([])
+		placesStore.storeThreeLastPlaces([])
+		return
 	}
 
-	// on trie les places par note et on garde les 3 mieux notés, puis on les stocke dans le store
-	let threeTopPlaces = filteredPlacesList.sort((a, b) => {
-		if (a.note > b.note) return -1;
-		return a.note < b.note ? 1 : 0;
-	}).slice(0, 3)
+	const position = userPosition.value
+	const hasPosition = position
+		&& Number.isFinite(Number(position.latitude))
+		&& Number.isFinite(Number(position.longitude))
+	const departmentId = department.value?.id ?? department.value
+	let filteredPlacesList = departmentId
+		? placesStore.places.filter(place =>
+			String(place.department?.id ?? place.department_id) === String(departmentId))
+		: placesStore.places
+
+	if (hasPosition) {
+		const placesByDistance = placesStore.places
+			.map(place => ({ ...place, distanceKm: distanceInKm(place, position) }))
+			.filter(place => place.distanceKm !== null)
+			.sort((a, b) => a.distanceKm - b.distanceKm)
+		const nearbyPlaces = placesByDistance.filter(place => place.distanceKm <= nearbyRadiusKm)
+
+		filteredPlacesList = nearbyPlaces.length
+			? nearbyPlaces
+			: placesByDistance.slice(0, 3)
+	}
+
+	const threeTopPlaces = [...filteredPlacesList]
+		.sort((a, b) => Number(b.note) - Number(a.note))
+		.slice(0, 3)
+	const threeLastPlaces = [...filteredPlacesList]
+		.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+		.slice(0, 3)
 
 	placesStore.storeThreeTopPlaces(threeTopPlaces)
-
-	// idem pour les 3 derniers postés
-	let threeLastPlaces = filteredPlacesList.sort((a, b) => {
-		if (a.created_at > b.created_at) return -1;
-		return a.created_at < b.created_at ? 1 : 0;
-	}).slice(0, 3)
-
 	placesStore.storeThreeLastPlaces(threeLastPlaces)
 }
+
+watch(
+	[department, userPosition, () => placesStore.places],
+	getThreeTopAndLastPlaces,
+	{ immediate: true }
+)
 
 
 onBeforeMount(() => {
@@ -125,19 +157,6 @@ onBeforeMount(() => {
 	loading.value = false
 })
 
-
-onMounted(() => {
-
-	// ******************* si département choisi (à l'inscription ou après) ************************
-
-	// on récupère les 3 derniers lieux ajoutés + les 3 les mieux notés du dép.
-	// on fait cela dans onMounted pour être sûr que les lieux soient disponibles (sinon erreur)
-	// par défaut, s'effectue 1 seule fois par session car App est chargé au début (composant principal)
-	// le watch plus haut permet de surveiller les éventuels changements de département et d'actualiser ces deux "top 3"
-	if (placesStore.places) {
-		getThreeTopAndLastPlaces()
-	}
-})
 
 // onmounted chat gpt
 // onMounted(async () => {
@@ -178,17 +197,17 @@ onMounted(() => {
 			<div class="container-fluid p-5" id="presentation">
 				<div class="row pb-4">
 					<div class="col-md-6 my-auto">
-						<img id="bigLogo" class="w-100 h-100 bg-white rounded" src="../../public/images/logo.png"
+						<img id="bigLogo" class="w-75 h-75 bg-white rounded" src="../../public/images/logo.png"
 							alt="logo nice places">
 					</div>
 
 					<div class="col-md-6 my-auto">
-						<p class="text-white fs-3">Un site et un appli mobile simples à utiliser, pour trouver et
+						<p class="text-white fs-3">Nice places est une plateforme communautaire simple à utiliser, pour trouver et
 							partager
 							des
 							sorties nature
 							(plage,
-							forêt, lac, montagne...) près de chez vous !</p>
+							forêt, lac, montagne...) près de chez vous. Plages, forêts, lacs, montagne, parcs urbains.. Il y a toujours une nouvelle balade à découvrir !</p>
 					</div>
 				</div>
 
@@ -199,8 +218,10 @@ onMounted(() => {
 
 			<div id="presentationBottomStripe" class="mb-3"></div>
 
-			<i class="greenIcon mt-5 mx-auto fa-2x fa-solid fa-map-location-dot"></i>
-			<h2 class="fs-2 m-3"> Carte des lieux autour de chez vous</h2>
+			<div class="home-section-heading">
+				<i class="greenIcon mx-auto fa-2x fa-solid fa-map-location-dot"></i>
+				<h2 class="fs-2 m-3">Carte des lieux autour de chez vous</h2>
+			</div>
 
 
 			<!-- *********************************************** CARTE ************************************************** -->
@@ -209,10 +230,10 @@ onMounted(() => {
 
 			<!-- *********************************************** CATEGORIES ************************************************** -->
 
-			<div class="container-fluid" v-if="!loading && placesStore.categories">
+			<div class="container-fluid home-section" v-if="!loading && placesStore.categories">
 
-				<div>
-					<i class="greenIcon mt-5 mx-auto fa-2x fa-solid fa-book-atlas"></i>
+				<div class="home-section-heading">
+					<i class="greenIcon mx-auto fa-2x fa-solid fa-book-atlas"></i>
 					<h2 class="fs-2 m-3">Catégories</h2>
 				</div>
 
@@ -220,17 +241,12 @@ onMounted(() => {
 
 					<!-- ********************** boucle qui affiche les 3 catégories avec le + de lieux ************************* -->
 
-					<div v-for="(category, index) in placesStore.categories.slice(0, 3)" :key="category.id"
-						class="category-image-overlay mx-auto col-md-6 col-lg-4 p-5 border border-white"
+					<router-link v-for="category in placesStore.categories.slice(0, 3)" :key="category.id"
+						:to="`/categories/${category.id}`"
+						class="category-image-overlay mx-auto col-md-6 col-lg-4 p-4 border border-white d-flex align-items-center justify-content-center text-decoration-none"
 						:style="`background-image: url('/images/category${category.id}.jpg'); background-position: center; background-size: cover;`">
-
-						<p class="fs-2 m-auto text-white textWithShadow p-5">{{ category.name }}</p>
-
-						<router-link :to="`/categories/${category.id}`"><button
-								class="btn btn-lg greenButton rounded-pill mt-2">voir les lieux</button>
-						</router-link>
-
-					</div>
+						<p class="fs-2 m-0 text-white textWithShadow">{{ category.name }}</p>
+					</router-link>
 
 				</div>
 
@@ -243,10 +259,11 @@ onMounted(() => {
 
 			<!-- ******************************************* TOP DES LIEUX *********************************************** -->
 
-			<div v-if="placesStore.threeTopPlaces && placesStore.threeTopPlaces.length > 2">
-				<div>
-					<i class="greenIcon mt-5 mx-auto fa-2x fa-solid fa-star"></i>
-					<h2 v-if="department" class="fs-2 m-3">Le top des lieux dans votre département</h2>
+			<div v-if="placesStore.threeTopPlaces?.length" class="home-section">
+				<div class="home-section-heading">
+					<i class="greenIcon mx-auto fa-2x fa-solid fa-star"></i>
+					<h2 v-if="userPosition?.latitude != null" class="fs-2 m-3">Le top des lieux près de vous</h2>
+					<h2 v-else-if="department" class="fs-2 m-3">Le top des lieux dans votre département</h2>
 					<h2 v-else class="fs-2 m-3">Le top des lieux (France entière)</h2>
 				</div>
 
@@ -256,45 +273,39 @@ onMounted(() => {
 
 						<!-- ********************** boucle qui affiche les 3 places ************************* -->
 
-						<div v-for="(topPlace, index) in placesStore.threeTopPlaces"
+						<div v-for="(topPlace, index) in placesStore.threeTopPlaces" :key="topPlace.id"
 							class="mx-auto col-md-6 col-lg-4 p-2 border border-white d-flex flex-column justify-content-between"
-							:style="`background-image: url(../../public/images/${topPlace.cover_image[0] ? topPlace.cover_image[0].name : 'defaultpicture.jpg'
-								}); background-position: center; background-size: cover;`">
-							<div class="infosTopLieux pt-1 pb-3">
-
-								<div class="rankingAndName row d-flex justify-content-between align-items-center">
-									<div class="col-2">
-										<span class="ranking"> #{{ index + 1 }} </span>
-									</div>
-									<div class="col-10">
-										<h5>{{ topPlace.name }}</h5>
-									</div>
+							:style="getPlaceImageStyle(topPlace)">
+							<div class="home-place-info">
+								<div class="home-place-heading">
+									<span class="ranking">#{{ index + 1 }}</span>
+									<h5>{{ topPlace.name }}</h5>
 								</div>
-
-								<div class="row">
-									<div class="col-6">
-										<i class="yellowStar fa-2x fa-solid fa-star me-1"></i> {{ topPlace.note }}
-										<span class="fs-4 rounded-circle border border-white p-2 ms-2"
-											v-html="topPlace.category.icone"></span>
-									</div>
-									<div class="col-6 d-flex">
-										<i class="greenIcon fa-2x fa-solid fa-location-dot me-2"></i>
-										<p class="text-white my-auto">{{ topPlace.city }} ({{
-											topPlace.postcode.substr(0, 2)
-										}})</p>
-									</div>
+								<div class="home-place-meta">
+									<span class="home-place-meta-item">
+										<i class="yellowStar fa-solid fa-star home-place-meta-icon"></i>
+										{{ topPlace.note }}
+									</span>
+									<span class="home-place-meta-item">
+										<span class="home-place-category-icon" v-html="topPlace.category?.icon"></span>
+										{{ topPlace.category?.name }}
+									</span>
+									<span class="home-place-meta-item">
+										<i class="greenIcon fa-solid fa-location-dot home-place-meta-icon"></i>
+										{{ topPlace.city }} ({{ String(topPlace.postcode ?? '').substring(0, 2) }})
+										<span v-if="topPlace.distanceKm != null">· {{ topPlace.distanceKm.toFixed(1) }} km</span>
+									</span>
 								</div>
-
 							</div>
 
-							<router-link :to="`/place/${topPlace.id}`"><button
+							<router-link :to="`/lieu/${topPlace.id}`"><button
 									class="btn btn-lg greenButton rounded-pill">découvrir</button></router-link>
 
 						</div>
 
 					</div>
 
-					<router-link to="/topplaces"><button class="btn btn-lg blueButton mt-3 rounded-pill">Classement
+					<router-link to="/toplieux"><button class="btn btn-lg blueButton mt-3 rounded-pill">Classement
 							complet</button>
 					</router-link>
 
@@ -304,11 +315,13 @@ onMounted(() => {
 
 			<!-- ********************************* DERNIERS LIEUX AJOUTES *************************************** -->
 
-			<div v-if="placesStore.threeLastPlaces && placesStore.threeLastPlaces.length > 2">
-
-				<i class="greenIcon mt-5 mx-auto fa-2x fa-solid fa-clock"></i>
-				<h2 v-if="department" class="fs-2 m-3"> Derniers places ajoutés dans votre département</h2>
-				<h2 v-else class="fs-2 m-3"> Derniers places ajoutés (France entière)</h2>
+			<div v-if="placesStore.threeLastPlaces?.length" class="home-section">
+				<div class="home-section-heading">
+					<i class="greenIcon mx-auto fa-2x fa-solid fa-clock"></i>
+					<h2 v-if="userPosition?.latitude != null" class="fs-2 m-3">Derniers lieux ajoutés près de vous</h2>
+					<h2 v-else-if="department" class="fs-2 m-3">Derniers lieux ajoutés dans votre département</h2>
+					<h2 v-else class="fs-2 m-3">Derniers lieux ajoutés (France entière)</h2>
+				</div>
 
 				<div class="container-fluid">
 
@@ -316,52 +329,28 @@ onMounted(() => {
 
 						<!-- ********************** boucle qui affiche les 3 derniers places ************************* -->
 
-						<div v-for="lastPlace in placesStore.threeLastPlaces"
+						<div v-for="lastPlace in placesStore.threeLastPlaces" :key="lastPlace.id"
 							class="mx-auto col-md-6 col-lg-4 p-2 border border-white d-flex flex-column justify-content-between"
-							:style="`background-image: url(../../public/images/${lastPlace.cover_image[0] ? lastPlace.cover_image[0].name : 'defaultpicture.jpg'
-								}); background-position: center; background-size: cover;`">
-							<div class="infosDerniersLieux pt-2 px-1">
-
-								<div class="row">
-									<div class="col-2">
-										<span class="fs-4 rounded-circle border border-white p-1 ms-2"
-											v-html="lastPlace.category.icone"></span>
-									</div>
-									<div class="col-10">
-										<h5>{{ lastPlace.name }}</h5>
-									</div>
+							:style="getPlaceImageStyle(lastPlace)">
+							<div class="home-place-info">
+								<div class="home-place-heading">
+									<span class="home-place-category-icon" v-html="lastPlace.category?.icon"></span>
+									<h5>{{ lastPlace.name }}</h5>
 								</div>
-
-								<div class="row">
-									<div class="row col">
-
-										<div class="col-3">
-											<i class="greenIcon fa-2x fa-solid fa-location-dot"></i>
-										</div>
-
-										<div class="col-9">
-											<p class="text-white">{{ lastPlace.city }} ({{
-												lastPlace.postcode.substr(0, 2) }})</p>
-										</div>
-
-									</div>
-
-									<div class="row col-md-8" v-if="lastPlace.city.length < 15">
-
-										<div class="col-3">
-											<i class="greenIcon fa-2x fa-solid fa-user"></i>
-										</div>
-
-										<div class="col-9" v-if="lastPlace.user">
-											<p class="text-white">par {{ lastPlace.user.name }}</p>
-										</div>
-									</div>
-
+								<div class="home-place-meta">
+									<span class="home-place-meta-item">
+										<i class="greenIcon fa-solid fa-location-dot home-place-meta-icon"></i>
+										{{ lastPlace.city }} ({{ String(lastPlace.postcode ?? '').substring(0, 2) }})
+										<span v-if="lastPlace.distanceKm != null">· {{ lastPlace.distanceKm.toFixed(1) }} km</span>
+									</span>
+									<span v-if="lastPlace.user" class="home-place-meta-item">
+										<i class="greenIcon fa-solid fa-user home-place-meta-icon"></i>
+										par {{ lastPlace.user.name }}
+									</span>
 								</div>
-
 							</div>
 
-							<router-link :to="`/place/${lastPlace.id}`"><button
+							<router-link :to="`/lieu/${lastPlace.id}`"><button
 									class="btn btn-lg greenButton rounded-pill">découvrir</button></router-link>
 
 						</div>
@@ -377,7 +366,7 @@ onMounted(() => {
 
 			<!-- *********************************** INSCRIVEZ-VOUS ************************************** -->
 
-			<section id="inscrivezVous" class="mt-2">
+			<section id="inscrivezVous">
 
 				<i class="greenIcon mt-5 mx-auto fa-2x fa-solid fa-user-plus"></i>
 				<h2 class="fs-2 m-3">Inscrivez-vous gratuitement !</h2>
@@ -385,18 +374,18 @@ onMounted(() => {
 				<div class="container-fluid px-5 mt-4">
 					<div class="row" id="inscrivezVousIcones">
 						<div class="col-md-4 p-1">
-							<img class="inscrivezVousIcones" src="../../public/images/icons/france.png" alt="France">
+							<i class="signup-feature-icon fa-solid fa-earth-europe" aria-hidden="true"></i>
 							<p class="fs-4 mt-3">Des lieux dans toute la France</p>
 						</div>
 
 						<div class="col-md-4 p-1">
-							<img id="pointer" src="../../public/images/icons/pointer.png" alt="pointeur">
+							<i class="signup-feature-icon fa-solid fa-location-dot" aria-hidden="true"></i>
 							<p class="fs-4 mt-3">Partagez vos coins préférés</p>
 						</div>
 
 						<div class="col-md-4 p-1">
-							<img class="inscrivezVousIcones" src="../../public/images/icons/phone.png" alt="téléphone">
-							<p class="fs-4 mt-3">Un site web et une appli mobile</p>
+							<i class="signup-feature-icon fa-solid fa-people-group" aria-hidden="true"></i>
+							<p class="fs-4 mt-3">Rejoignez la communauté</p>
 						</div>
 					</div>
 				</div>
@@ -458,11 +447,6 @@ h2 {
 	color: #94D1BE
 }
 
-.inscrivezVousIcones {
-	width: 10vw;
-	height: 10vw
-}
-
 .yellowStar {
 	color: yellow !important
 }
@@ -483,34 +467,33 @@ h2 {
 
 /******************* boutons ************/
 
-.greenButton {
-	color: white;
-	background-color: #94D1BE;
-}
-
 .greenButton,
 .blueButton {
 	font-family: "Cooper", system-ui, sans-serif;
 	font-weight: 700;
+	color: #1C6E8C !important;
+	background-color: #94D1BE;
+	border: 0;
+	border-radius: 20px;
+	transition: color 150ms ease, background-color 150ms ease, transform 150ms ease;
 }
 
-.greenButton {
-	color: #1C6E8C;
-}
-
-.greenButton:hover {
-	color: white;
+.greenButton:hover,
+.greenButton:focus-visible,
+.blueButton:hover,
+.blueButton:focus-visible {
+	color: white !important;
 	background-color: #1C6E8C;
 }
 
-.blueButton {
-	color: white;
-	background-color: #1C6E8C;
+.greenButton:active,
+.blueButton:active {
+	transform: translateY(1px);
 }
 
-.blueButton:hover {
-	color: white;
-	background-color: #1C6E8C;
+.greenButton:disabled,
+.blueButton:disabled {
+	transform: none;
 }
 
 /************* ombres ************/
@@ -521,6 +504,27 @@ h2 {
 
 .category-image-overlay {
 	font-family: "Cooper", system-ui, sans-serif;
+	min-height: 50vh;
+	margin-bottom: 1rem;
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: cover;
+}
+
+.home-section {
+	margin-top: 5rem;
+}
+
+.home-section-heading {
+	margin: 4rem 0 1.5rem;
+}
+
+.home-section-heading h2 {
+	margin-bottom: 0;
+}
+
+#categories {
+	row-gap: 1rem;
 }
 
 .iconWithShadow {
@@ -568,10 +572,6 @@ p {
 	font-size: 2em;
 }
 
-.rankingAndName {
-	height: 70%
-}
-
 /******************* SECTIONS ACCUEIL *****************/
 
 /******************* section présentation ************/
@@ -600,10 +600,65 @@ p {
 	color: white
 }
 
-.infosTopLieux,
-.infosDerniersLieux {
+.home-place-info {
 	background-color: rgba(50, 61, 158, 0.5);
-	height: 34%
+	padding: 0.75rem;
+	text-align: left;
+}
+
+.home-place-heading {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+	margin-bottom: 0.65rem;
+}
+
+.home-place-heading h5 {
+	margin: 0;
+	color: white;
+	font-size: 1rem;
+	text-shadow: 1px 1px 2px #1c6e8c;
+}
+
+.home-place-meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.4rem 1rem;
+	color: white;
+	font-size: 0.9rem;
+	line-height: 1.4;
+}
+
+.home-place-meta-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	min-width: 0;
+}
+
+.home-place-meta-icon {
+	flex: 0 0 1rem;
+	width: 1rem;
+	font-size: 1rem;
+	text-align: center;
+}
+
+.home-place-category-icon {
+	display: inline-flex;
+	flex: 0 0 1.25rem;
+	align-items: center;
+	justify-content: center;
+	width: 1.25rem;
+	height: 1.25rem;
+	font-size: 1.1rem;
+	line-height: 1;
+	text-align: center;
+}
+
+.home-place-category-icon svg {
+	width: 1em;
+	height: 1em;
 }
 
 /******************* inscrivez-vous ************/
@@ -613,9 +668,24 @@ p {
 	color: #1c6e8c;
 }
 
-#pointer {
-	width: 6vw;
-	height: 10vw
+#inscrivezVous {
+	margin: 4rem 0 6rem;
+}
+
+#inscrivezVousIcones {
+	row-gap: 1.5rem;
+}
+
+#inscrivezVous .signup-feature-icon {
+	display: inline-flex;
+	width: 5.5rem;
+	height: 5.5rem;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	background-color: #e8f5f1;
+	color: #1c6e8c;
+	font-size: 2.5rem;
 }
 
 
@@ -634,18 +704,24 @@ p {
 		height: 120vh;
 	}
 
+	.category-image-overlay {
+		min-height: 40vh;
+	}
+
+	.home-section {
+		margin-top: 4rem;
+	}
+
+	.home-section-heading {
+		margin: 3rem 0 1.25rem;
+	}
+
+	#inscrivezVous {
+		margin: 3rem 0 4rem;
+	}
+
 	#presentation {
 		height: 62vh
-	}
-
-	.inscrivezVousIcones {
-		width: 20vw;
-		height: 20vw
-	}
-
-	#pointer {
-		width: 12vw;
-		height: 20vw
 	}
 
 	.bigFontSize2 {
@@ -665,13 +741,10 @@ p {
 		height: 57vh
 	}
 
-	.infosTopLieux {
-		height: 55%
+	.category-image-overlay {
+		min-height: 42.5vh;
 	}
 
-	.infosDerniersLieux {
-		height: 60%
-	}
 }
 
 @media screen and (min-width: 769px) and (max-width: 992px) {
@@ -680,34 +753,9 @@ p {
 	#derniersplaces {
 		height: 60vh;
 	}
-}
 
-@media screen and (min-width: 581px) and (max-width: 992px) {
-	.inscrivezVousIcones {
-		width: 17vw;
-		height: 17vw
-	}
-
-	#pointer {
-		width: 11vw;
-		height: 17vw
-	}
-}
-
-@media screen and (max-width: 992px) {
-
-	.infosTopLieux {
-		height: 40%
-	}
-
-	.infosDerniersLieux {
-		height: 45%
-	}
-}
-
-@media screen and (min-width: 993px) {
-	.infosDerniersLieux {
-		height: 35%
+	.category-image-overlay {
+		min-height: 30vh;
 	}
 }
 

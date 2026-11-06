@@ -34,6 +34,8 @@ class CategoryController extends BaseController
      */
     public function store(Request $request)
     {
+        $this->authorizeAdmin($request);
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|min:5|max:50',
             'icon' => 'required|string|max:50',
@@ -70,6 +72,24 @@ class CategoryController extends BaseController
         return $this->sendResponse($category, $message);
     }
 
+    public function updateImage(Request $request, Category $category)
+    {
+        $this->authorizeAdmin($request);
+        $validated = $request->validate([
+            'image' => 'required|image|mimes:jpg,jpeg|max:5120',
+        ]);
+
+        $path = public_path("images/category{$category->id}.jpg");
+        if (!copy($validated['image']->getRealPath(), $path)) {
+            return $this->sendError('Impossible d’enregistrer l’image de la catégorie.', [], 500);
+        }
+
+        return $this->sendResponse(
+            $category->fresh(),
+            'L’image de la catégorie a bien été modifiée.'
+        );
+    }
+
     /**
      * Update the specified resource in storage.
      *
@@ -79,6 +99,8 @@ class CategoryController extends BaseController
      */
     public function update(Request $request, Category $category)
     {
+        $this->authorizeAdmin($request);
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|max:50',
             'icon' => 'required|max:50',
@@ -105,6 +127,8 @@ class CategoryController extends BaseController
      */
     public function destroy(Category $category)
     {
+        $this->authorizeAdmin(request());
+
         $category->delete();
         $message = "Catégorie supprimée avec succès";
         return $this->sendResponse($category, $message);

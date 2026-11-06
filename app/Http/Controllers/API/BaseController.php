@@ -3,9 +3,15 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller as Controller;
+use Illuminate\Http\Request;
 
 class BaseController extends Controller
 {
+    protected function authorizeAdmin(Request $request): void
+    {
+        abort_unless((int) $request->user()?->role?->id === 2, 403, 'Accès réservé à l’administration.');
+    }
+
     /**
      * success response method.
      *

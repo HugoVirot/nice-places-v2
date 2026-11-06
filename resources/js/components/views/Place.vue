@@ -26,9 +26,16 @@
                     </div>
 
                     <div v-if="userStore.userLoggedIn" class="col-md-4">
-                        <i v-if="isInFavorites" @click="removeToFavorites"
-                            class="greenIcon fa-solid fa-heart fa-2x"></i>
-                        <i v-else @click="addToFavorites" class="greenIcon fa-regular fa-heart fa-2x"></i>
+                        <button type="button" class="btn p-0 border-0" :disabled="favoriteLoading"
+                            :aria-label="isInFavorites ? 'Retirer des favoris' : 'Ajouter aux favoris'"
+                            :title="isInFavorites ? 'Retirer des favoris' : 'Ajouter aux favoris'"
+                            @click="toggleFavorite">
+                            <i :class="[
+                                'fa-2x',
+                                isInFavorites ? 'greenIcon fa-solid fa-heart' : 'greenIcon fa-regular fa-heart'
+                            ]"></i>
+                        </button>
+                        <p v-if="favoriteError" class="text-danger mt-2" role="alert">{{ favoriteError }}</p>
                     </div>
 
                     <div v-else class="col-md-4">
@@ -49,7 +56,7 @@
         <img class="singlePicture" v-else-if="place.images.length == 1" :src="`/images/${place.images[0].name}`"
             alt="image du place">
 
-        <div v-else id="carouselLieu" class="carousel slide carousel-fade container" data-bs-ride="carousel">
+        <div v-else id="carouselLieu" class="carousel slide carousel-fade place-gallery" data-bs-ride="carousel">
 
             <div class="carousel-inner">
 
@@ -247,18 +254,17 @@ import LoadingSpinner from '../utilities/LoadingSpinner.vue'
 import moment from 'moment';
 import PosterAvis from '../utilities/CreateReview.vue';
 import { useUserStore } from "../../stores/userStore"
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { onBeforeMount, computed, ref } from 'vue';
 
 moment.locale('fr');
 
 const userStore = useUserStore()
 const route = useRoute()
-const router = useRouter()
 
 const isInFavorites = computed(() => {
     return Array.isArray(userStore.favorites)
-        && userStore.favorites.some(favorite => favorite.name === place.value?.name)
+        && userStore.favorites.some(favorite => Number(favorite.id) === Number(place.value?.id))
 })
 
 const placeId = route.params.id
@@ -266,43 +272,35 @@ const place = ref(null)
 const showAllReviews = ref(false)
 const showFullComment = ref(false)
 const loading = ref(true)
+const favoriteLoading = ref(false)
+const favoriteError = ref("")
 
-const addToFavorites = () => {
-    axios.post('/api/favorites', { place_id: placeId, user_id: userStore.id })
+const toggleFavorite = async () => {
+    if (!place.value || favoriteLoading.value) return
 
-        .then(response => {
-            let message = response.data.message
+    favoriteLoading.value = true
+    favoriteError.value = ""
 
-            axios.get('/api/favorites/' + userStore.id)
-
-                .then(response => {
-                    userStore.storeFavorites(response.data.data)
-                    router.push('/successmessagelastpage/' + message)
-                }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-                })
-        }).catch(() => {
-            alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-        })
-}
-
-const removeToFavorites = () => {
-    axios.delete('/api/favorites/' + userStore.id + '/' + placeId)
-
-        .then(response => {
-            let message = response.data.message
-
-            axios.get('/api/favorites/' + userStore.id)
-
-                .then(response => {
-                    userStore.storeFavorites(response.data.data)
-                    router.push('/successmessagelastpage/' + message)
-                }).catch(() => {
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-                })
-        }).catch(() => {
-            alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-        })
+    try {
+        if (isInFavorites.value) {
+            await axios.delete(`/api/favorites/${userStore.id}/${place.value.id}`)
+            userStore.storeFavorites(
+                (Array.isArray(userStore.favorites) ? userStore.favorites : [])
+                    .filter(favorite => Number(favorite.id) !== Number(place.value.id))
+            )
+        } else {
+            await axios.post('/api/favorites', { place_id: place.value.id })
+            const favorites = Array.isArray(userStore.favorites) ? userStore.favorites : []
+            userStore.storeFavorites([
+                ...favorites.filter(favorite => Number(favorite.id) !== Number(place.value.id)),
+                place.value
+            ])
+        }
+    } catch {
+        favoriteError.value = "Impossible de mettre à jour vos favoris. Vérifiez votre connexion puis réessayez."
+    } finally {
+        favoriteLoading.value = false
+    }
 }
 
 onBeforeMount(() => {
@@ -321,7 +319,33 @@ onBeforeMount(() => {
 
 <style scoped>
 .singlePicture {
-    width: 90vw
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    margin: 0 auto;
+    object-fit: contain;
+}
+
+.place-gallery {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+}
+
+.carousel-item img {
+    object-fit: contain;
+}
+
+.carousel-inner,
+.carousel-item {
+    height: 100%;
+}
+
+.carousel-item img {
+    width: 100%;
+    height: 100%;
 }
 
 #texteFavoris {

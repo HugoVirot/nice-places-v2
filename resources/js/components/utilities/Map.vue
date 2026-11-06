@@ -86,6 +86,29 @@ const toggleFullscreen = () => {
     }
 };
 
+const createCategoryMarkerIcon = (category, placeName) => {
+    const marker = document.createElement('span');
+    marker.className = 'category-map-marker';
+    marker.style.setProperty(
+        '--marker-color',
+        CSS.supports('color', category?.color) ? category.color : '#1c6e8c'
+    );
+    marker.title = placeName;
+
+    const categoryIcon = document.createElement('span');
+    categoryIcon.className = 'category-map-marker-icon';
+    categoryIcon.innerHTML = category?.icon || '<i class="fa-solid fa-location-dot"></i>';
+    marker.appendChild(categoryIcon);
+
+    return L.divIcon({
+        html: marker,
+        className: 'category-map-marker-wrapper',
+        iconSize: [48, 48],
+        iconAnchor: [24, 46],
+        popupAnchor: [0, -42]
+    });
+};
+
 const addPlaceMarkers = () => {
     if (!placesLayer || props.singlePlace || !Array.isArray(placesStore.places)) return;
 
@@ -99,14 +122,6 @@ const addPlaceMarkers = () => {
         const category = place.category ?? placesStore.categories?.find(item => item.id === place.category_id);
         const categoryId = category?.id ?? place.category_id;
         if (Array.isArray(placesStore.categories) && !selectedCategoryIds.value.includes(String(categoryId))) return;
-
-        const markerOptions = category?.icon ? {
-            icon: L.divIcon({
-                html: `<span style="color:${category.color || '#1c6e8c'}">${category.icon}</span>`,
-                className: 'fa-2x',
-                iconSize: [40, 40]
-            })
-        } : {};
 
         const popup = document.createElement('div');
         popup.className = 'text-center';
@@ -160,7 +175,9 @@ const addPlaceMarkers = () => {
         });
         popup.appendChild(detailsLink);
 
-        L.marker([latitude, longitude], markerOptions)
+        L.marker([latitude, longitude], {
+            icon: createCategoryMarkerIcon(category, place.name)
+        })
             .bindPopup(popup, { maxWidth: 350, className: 'popupplace' })
             .addTo(placesLayer);
     });
@@ -196,7 +213,11 @@ const initializeMap = () => {
     fullscreenControl.addTo(leafletMap);
 
     if (props.singlePlace) {
-        L.marker([latitude, longitude]).addTo(leafletMap);
+        const category = props.singlePlace.category
+            ?? placesStore.categories?.find(item => item.id === props.singlePlace.category_id);
+        L.marker([latitude, longitude], {
+            icon: createCategoryMarkerIcon(category, props.singlePlace.name)
+        }).addTo(leafletMap);
         return;
     }
 
@@ -366,5 +387,42 @@ onBeforeUnmount(() => {
 :global(.map-fullscreen-button:hover) {
     background: #f4f4f4;
     color: #1c6e8c;
+}
+
+:global(.category-map-marker-wrapper) {
+    border: 0;
+    background: transparent;
+}
+
+:global(.category-map-marker) {
+    display: flex;
+    width: 34px;
+    height: 34px;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 6px;
+    border: 2px solid #fff;
+    border-radius: 50% 50% 50% 0;
+    background: var(--marker-color);
+    box-shadow: 0 2px 5px rgb(0 0 0 / 40%);
+    color: #fff;
+    transform: rotate(-45deg);
+}
+
+:global(.category-map-marker-icon) {
+    display: flex;
+    width: 1em;
+    height: 1em;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 15px;
+    line-height: 1;
+    transform: rotate(45deg);
+}
+
+:global(.category-map-marker-icon svg) {
+    width: 1em;
+    height: 1em;
 }
 </style>

@@ -2,66 +2,52 @@
 
 namespace App\Http\Controllers\API;
 
-use Illuminate\Http\Request;
+use App\Models\Place;
 use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class FavoriteController extends BaseController
 {
-
     public function __construct()
     {
-        // middleware sanctum appliqué sur toutes les méthodes
         $this->middleware('auth:sanctum');
     }
 
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
     public function index(User $user)
     {
-        // on charge les lieux favoris de l'utilisateur
+        if (request()->user()->isNot($user)) {
+            throw ValidationException::withMessages([
+                'user' => ['Vous ne pouvez consulter que vos propres favoris.'],
+            ]);
+        }
+
         $user->load('favorites');
-        // on les renvoie en format json
+
         return $this->sendResponse($user->favorites, 'Favoris récupérés avec succès');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
     public function store(Request $request)
     {
-        // on récupère le user connecté
-        $user = User::find($request->user_id);
+        $validated = $request->validate([
+            'place_id' => ['required', 'integer', 'exists:places,id'],
+        ]);
 
-        // on ajoute le lieu sélectionné à ses favoris via la syntaxe favoris()->attach
-        // qui cible la table intermédiaire favoris (via relation favoris dans le modèle User)
-        $user->favorites()->attach($request->place_id);
+        $request->user()->favorites()->syncWithoutDetaching([$validated['place_id']]);
 
-        // on renvoie la réponse avec un message de confirmation en json
-        $message = "Lieu ajouté aux favoris";
-        return $this->sendResponse($request->place_id, $message, 201);
+        return $this->sendResponse($validated['place_id'], 'Lieu ajouté aux favoris', 201);
     }
 
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(User $user, Place $place)
+    public function destroy(Request $request, User $user, Place $lieu)
     {
-        // on retire le lieu sélectionné à ses favoris via la syntaxe favoris()->detach
-        // qui cible la table intermédiaire favoris (via relation favoris dans le modèle User)
-        $user->favorites()->detach($place->id);
+        if ($request->user()->isNot($user)) {
+            throw ValidationException::withMessages([
+                'user' => ['Vous ne pouvez modifier que vos propres favoris.'],
+            ]);
+        }
 
-        // on renvoie la réponse avec un message de confirmation en json
-        $message = "Lieu retiré des favoris";
-        return $this->sendResponse($place->id, $message);
+        $user->favorites()->detach($lieu->id);
+
+        return $this->sendResponse($lieu->id, 'Lieu retiré des favoris');
     }
 }

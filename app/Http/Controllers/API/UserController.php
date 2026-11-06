@@ -30,6 +30,8 @@ class UserController extends BaseController
 
     public function index()
     {
+        $this->authorizeAdmin(request());
+
         // On récupère tous les utilisateurs
         $users = User::all();
 
@@ -186,6 +188,8 @@ class UserController extends BaseController
      */
     public function destroy(User $user)
     {
+        $this->authorizeAdmin(request());
+
         // On supprime l'utilisateur
         $user->delete();
 

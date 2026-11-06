@@ -6,7 +6,8 @@
             <h2 class="mt-2">Poster un avis</h2>
         </div>
 
-        <ValidationErrors :errors="validationErrors" v-if="validationErrors" />
+        <ValidationErrors :errors="validationErrors" v-if="Object.keys(validationErrors).length" />
+        <p v-if="submitError" class="alert alert-danger" role="alert">{{ submitError }}</p>
 
         <div v-if="userStore.id" class="row justify-content-center p-2 p-lg-4">
             <div class="col-md-8">
@@ -28,20 +29,20 @@
                             </div>
 
                             <div class="form-group row m-2">
-                                <label for="comment" class="col-md-4 col-form-label text-md-right"></label>
+                                <label for="comment" class="col-md-4 col-form-label text-md-right">commentaire (facultatif)</label>
 
                                 <div class="col-md-6">
-                                    <textarea v-model="comment" id="comment" class="form-control"
-                                        name="comment" autocomplete="comment">
-                                        comment (facultatif)</textarea>
+                                    <textarea v-model="comment" id="comment" class="form-control" name="comment"
+                                        autocomplete="comment" maxlength="2000"
+                                        placeholder="Racontez-nous votre expérience (facultatif)"></textarea>
                                 </div>
                             </div>
 
                             <div class="form-group row mt-3 text-center">
                                 <div class="col-md-6 offset-md-3">
-                                    <button type="submit"
+                                    <button type="submit" :disabled="submitting"
                                         class="greenButton btn btn-lg rounded-pill text-light btn-info">
-                                        Valider
+                                        {{ submitting ? "Envoi en cours..." : "Valider" }}
                                     </button>
                                 </div>
                             </div>
@@ -72,14 +73,33 @@ const props = defineProps(['place_id'])
 
 const note = ref('')
 const comment = ref('')
-const validationErrors = ref('')
+const validationErrors = ref({})
+const submitError = ref('')
+const submitting = ref(false)
 
-const sendData = () => {
-    axios.post('/api/reviews', { note: note.value, comment: comment.value, place_id: props.place_id, user_id: userStore.id })
-        .then((response) => {
-            router.push('/successmessage/lastpage/' + response.data.message);
-        }).catch((error) => {
-            validationErrors.value = error.response.data.errors;
+const sendData = async () => {
+    if (submitting.value) return
+
+    submitting.value = true
+    validationErrors.value = {}
+    submitError.value = ''
+
+    try {
+        const response = await axios.post('/api/reviews', {
+            note: Number(note.value),
+            comment: comment.value.trim() || null,
+            place_id: props.place_id
         })
+
+        await router.push(`/successmessage/lastpage/${encodeURIComponent(response.data.message)}`)
+    } catch (error) {
+        if (error.response?.status === 422) {
+            validationErrors.value = error.response.data.errors || {}
+        } else {
+            submitError.value = "Impossible d'enregistrer votre avis. Vérifiez votre connexion puis réessayez."
+        }
+    } finally {
+        submitting.value = false
+    }
 }
 </script>

@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\API;
 
 use App\Models\Image;
+use App\Models\Place;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 class ImageController extends BaseController
 {
@@ -23,7 +24,9 @@ class ImageController extends BaseController
      */
     public function index()
     {
-        $images = Image::all();
+        $this->authorizeAdmin(request());
+
+        $images = Image::with('place')->get();
         return $this->sendResponse($images, 'Images récupérées avec succès');
     }
 
@@ -35,55 +38,40 @@ class ImageController extends BaseController
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'image' => 'required|image|mimes:jpg,jpeg,png,svg|max:2048'
+        $validated = $request->validate([
+            'image' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+            'place_id' => 'required|integer|exists:places,id',
         ]);
 
-        if ($validator->fails()) {
-            return $this->sendError('Error validation', $validator->errors());
-        }
+        $user = $request->user();
+        $place = Place::findOrFail($validated['place_id']);
+        $file = $request->file('image');
+        $imageCount = Image::where('place_id', $place->id)->count();
+        $imageName = substr(Str::slug($place->name), 0, 25)
+            . '_image_' . Str::random(8) . '.' . $file->extension();
+        $imageInfo = in_array(strtolower($file->extension()), ['jpg', 'jpeg', 'png'], true)
+            ? getimagesize($file->getRealPath())
+            : false;
+        $fileSize = round($file->getSize() / 1000);
+        $isAdmin = (int) $user->role?->id === 2;
+        $file->move(public_path('images'), $imageName);
 
-        // ********************************** sauvegarde de l'image *************************************
-
-        // on récupère le nombre d'images pour ce lieu
-        $imagesTotalForPlace = Image::where('place_id', $request->place_id)->count();
-
-        // on accède à l'image transmise via le formulaire
-        $image = $request->file('image');
-
-        //nom de l'image = nom du lieu (espaces changés en underscores) + _image_ + le N° de l'image pour ce lieu + l'extension
-        // exemple : parc_des_oiseaux_image_1.jpg
-        $imageName = str_replace(' ', '_', substr($request->nom_lieu, 0, 20)) . "_image_" . $imagesTotalForPlace + 1  . '.' . $image->extension();
-
-        // on récupère les dimensions de l'image
-        $imageInfos = getimagesize($image);
-
-        // on récupère le poids en kb de l'image
-        $fileSize = round(filesize($image) / 1000);
-
-        // on déplace l'image de son emplacement temporaire vers le dossier public/images
-        $image->move(public_path('images'), $imageName);
-
-        // on sauvegarde l'image en bdd
-        Image::create([
+        $image = Image::create([
             'name' => $imageName,
-            'user_id' => $request->user_id,
-            'place_id' => $request->place_id,
-            'height' => $imageInfos[0],
-            'width' => $imageInfos[1],
+            'user_id' => $user->id,
+            'place_id' => $place->id,
+            'width' => $imageInfo ? $imageInfo[0] : null,
+            'height' => $imageInfo ? $imageInfo[1] : null,
             'size' => $fileSize,
-            'cover' => $imagesTotalForPlace == 0 ? true : false, // on la met en avant si c'est la première postée pour ce lieu
-            'status' => $request->user_id == 1 ? "validée" : "en attente"
+            'cover' => $imageCount === 0,
+            'status' => $isAdmin ? 'validée' : 'en attente',
         ]);
 
-        // on retourne un message de succès et les noms des images uploadées
-        $message = "Image envoyée !";
+        $message = $isAdmin
+            ? 'Image envoyée !'
+            : "Image envoyée. Elle sera visible après validation par l'administrateur.";
 
-        if ($request->user_id !== 1) {
-            $message .= " En attente de validation par l'administrateur.";
-        }
-
-        return $this->sendResponse($image, $message);
+        return $this->sendResponse($image->fresh()->load('place'), $message, 201);
     }
 
     /**
@@ -106,33 +94,40 @@ class ImageController extends BaseController
      */
     public function update(Request $request, Image $image)
     {
-        $validator = Validator::make($request->all(), [
-            'cover' => 'required|boolean',
-            'status' => 'required'
+        $this->authorizeAdmin($request);
+        $validated = $request->validate([
+            'cover' => 'sometimes|required|boolean',
+            'status' => 'sometimes|required|in:validée,en attente,refusée',
         ]);
-
-        if ($validator->fails()) {
-            return $this->sendError('Error validation', $validator->errors());
+        if (empty($validated)) {
+            return $this->sendError('Aucune modification fournie.', [], 422);
         }
 
-        $image->update($request->except('_token'));
-
-        // si l'image est mise en avant, on désactive cette option sur l'autre image du lieu mise en avant
-        if ($request->mise_en_avant) {
-            $samePlaceCoverImage = Image::where(['place_id' => $image->place_id, 'cover' => true])->get();
-            $samePlaceCoverImage = $samePlaceCoverImage[0];
-            $samePlaceCoverImage->cover = false;
-            $samePlaceCoverImage->save();
+        $wasCover = $image->cover;
+        if (!empty($validated['cover']) && $image->place_id) {
+            Image::where('place_id', $image->place_id)->where('id', '!=', $image->id)->update(['cover' => false]);
         }
+        $image->update($validated);
 
-        // on supprime l'image si son statut est "refusée" (on vérifie par précaution que le fichier existe)
-        if ($image->status == "refusée" && File::exists(public_path('images/' . $image->nom))) {
-            File::delete(public_path('images/' . $image->nom));
+        if (
+            $wasCover
+            && $image->place_id
+            && $image->status !== 'validée'
+            && !Image::where('place_id', $image->place_id)
+                ->where('cover', true)
+                ->where('status', 'validée')
+                ->exists()
+        ) {
+            $nextCover = Image::where('place_id', $image->place_id)
+                ->where('status', 'validée')
+                ->where('id', '!=', $image->id)
+                ->first();
+            $nextCover?->update(['cover' => true]);
         }
 
         // On retourne la réponse en JSON
         $message = "L'image a bien été modifiée";
-        return $this->sendResponse($image, $message, 201);
+        return $this->sendResponse($image->fresh()->load('place'), $message, 201);
     }
 
     /**
@@ -143,8 +138,10 @@ class ImageController extends BaseController
      */
     public function destroy(Image $image)
     {
+        $this->authorizeAdmin(request());
+
         // on supprime l'image du dossier public/images
-        File::delete(public_path("images/" . $image->nom));
+        File::delete(public_path("images/" . $image->name));
 
         // on la supprime de la table images
         $image->delete();

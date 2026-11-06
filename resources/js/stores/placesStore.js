@@ -59,6 +59,7 @@ export const usePlacesStore = defineStore({
         },
 
         storeNewPlace(newPlace) {
+            if (!Array.isArray(this.places)) this.places = []
             this.places.push(newPlace)
         }
     },

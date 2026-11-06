@@ -9,9 +9,19 @@ class Category extends Model
 {
     use HasFactory;
 
+    protected $appends = ['image_url'];
+
     public function places()
     {
         return $this->hasMany(Place::class);
+    }
+
+    public function getImageUrlAttribute(): string
+    {
+        $path = public_path("images/category{$this->id}.jpg");
+        $version = is_file($path) ? hash_file('sha256', $path) : 0;
+
+        return "/images/category{$this->id}.jpg?v={$version}";
     }
 
     /**

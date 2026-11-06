@@ -10,6 +10,7 @@ export const useUserStore = defineStore({
             name: "",
             email: "",
             id: "",
+            roleId: null,
             department: "",
             token: "",
             role: "",
@@ -41,6 +42,7 @@ export const useUserStore = defineStore({
             this.name = userData.name
             this.email = userData.email
             this.id = userData.id
+            this.roleId = Number(userData.role?.id ?? userData.role_id) || null
             this.department = userData.department
             this.region = userData.department ? userData.department.region.nom : null
             this.role = userData.role.name

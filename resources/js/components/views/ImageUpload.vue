@@ -36,7 +36,7 @@
                         <form @submit.prevent="sendData" enctype="multipart/form-data">
 
                             <div class="form-group row mx-2 mt-3">
-                                <input required type="file" class="form-control-file col-md-8 offset-md-2"
+                                <input type="file" accept="image/jpeg,image/png" class="form-control-file col-md-8 offset-md-2"
                                     v-on:change="onChange">
                             </div>
 
@@ -49,7 +49,7 @@
                                         </div>
                                         <div class="col-md-4 text-center">
                                             <i class="my-1 fa-3x fa-solid greenIcon fa-rectangle-list"></i>
-                                            <p>Formats acceptés : JPG / JPEG, PNG et SVG</p>
+                                            <p>Formats acceptés : JPG / JPEG et PNG</p>
                                         </div>
                                         <div class="col-md-4 text-center">
                                             <i class="my-1 fa-3x fa-solid greenIcon fa-panorama"></i>
@@ -61,8 +61,13 @@
 
                             <div class="form-group row mt-3 text-center">
                                 <div class="col-md-6 offset-md-3">
-                                    <button type="submit" class="btn btn-lg greenButton rounded-pill text-light">
-                                        Valider
+                                    <p class="form-text">Vous pourrez ajouter une image plus tard; l’image par défaut sera utilisée entre-temps.</p>
+                                    <button type="submit" class="btn btn-lg greenButton rounded-pill" :disabled="submitting || !selectedImage">
+                                        {{ submitting ? "Envoi en cours…" : "Valider" }}
+                                    </button>
+                                    <button type="button" class="btn btn-lg blueButton rounded-pill text-light ms-2"
+                                        :disabled="submitting" @click="skipImage">
+                                        Plus tard
                                     </button>
                                 </div>
                             </div>
@@ -81,38 +86,48 @@ import axios from "axios";
 import ValidationErrors from "../utilities/ValidationErrors.vue"
 import { useUserStore } from "../../stores/userStore";
 import { useRoute, useRouter } from "vue-router";
-import { onBeforeMount } from "vue";
+import { onBeforeMount, ref } from "vue";
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
 const placeId = route.params.id
-const place = ref('')
-const formData = new FormData()
-const validationErrors = ref([])
+const place = ref({})
+const selectedImage = ref(null)
+const validationErrors = ref(null)
+const submitting = ref(false)
 
 const onChange = e => {
-    let chosenImage = e.target.files[0]
-    this.formData.append('image', chosenImage)
+    selectedImage.value = e.target.files?.[0] ?? null
 }
 
-const sendData = () => {
+const skipImage = () => {
+    router.push("/meslieuxpostes")
+}
 
-    // on ajoute le user id et le place id au formulaire
-    formData.append("user_id", userStore.id);
-    formData.append("place_id", placeId);
+const sendData = async () => {
+    if (!selectedImage.value) {
+        validationErrors.value = { image: ["Sélectionnez une image avant de l'envoyer."] }
+        return
+    }
 
-    // on envoie le tout à l'api
-    axios.post('/api/images', formData)
-        .then((response) => {
-            let message = response.data.message
-            // on redirige vers l'accueil
-            router.push('/successmessagehome/' + message)
-        })
-        .catch((error) => {
-            validationErrors.value = error.response.data.errors;
-        })
+    submitting.value = true
+    validationErrors.value = null
+    const formData = new FormData()
+    formData.append("image", selectedImage.value)
+    formData.append("place_id", placeId)
+
+    try {
+        const response = await axios.post("/api/images", formData)
+        await router.push(`/successmessage/home/${encodeURIComponent(response.data.message)}`)
+    } catch (requestError) {
+        validationErrors.value = requestError.response?.data?.errors || {
+            image: [requestError.response?.data?.message || "Impossible d'envoyer l'image. Réessayez."]
+        }
+    } finally {
+        submitting.value = false
+    }
 }
 
 onBeforeMount(() => {
@@ -121,7 +136,7 @@ onBeforeMount(() => {
             place.value = response.data.data
         })
         .catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-            alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
+            validationErrors.value = { general: ["Impossible de récupérer ce lieu. Rechargez la page et réessayez."] }
         })
 })
 </script>

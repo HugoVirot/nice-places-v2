@@ -1,13 +1,19 @@
 <template>
   <header class="sticky-top">
-    <div class="container-fluid pt-1 d-flex align-items-center navbar-dark">
+    <div class="container-fluid d-flex align-items-center navbar-dark header-top">
       <!-- ************************** titre et bandes ***********************-->
 
       <div class="mt-1 d-none d-md-block greenBackground" id="leftstripe"></div>
 
       <!-- image avec deux bandes (mobiles uniquement) -->
-      <img class="d-block mt-3 d-md-none" id="twostripes" alt="bandes colorées header mobile"
+      <img class="d-none" id="twostripes" alt="bandes colorées header mobile"
         src="../../../../public/images/bandes-gauche-header.png" />
+
+      <button class="navbar-toggler greenBackground mobile-menu-toggle" type="button" data-bs-toggle="collapse"
+        data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false"
+        aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
 
       <div class="d-flex flex-column mx-auto text-center">
         <router-link to="/">
@@ -20,14 +26,6 @@
       </div>
 
       <div class="mt-3 d-none d-md-block" id="rightstripe"></div>
-
-      <!-- hamburger -->
-
-      <button class="navbar-toggler greenBackground mt-3 d-md-none my-auto" type="button" data-bs-toggle="collapse"
-        data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false"
-        aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
     </div>
 
     <!-- ************************** navbar ***********************-->
@@ -131,11 +129,15 @@ header {
 }
 
 #twostripes {
-  width: 15vw;
+  display: none;
 }
 
 #logo {
-  width: 260px;
+  width: 230px;
+}
+
+.mobile-menu-toggle {
+  display: none;
 }
 
 #textelogo {
@@ -165,7 +167,20 @@ nav .router-link-exact-active {
 }
 
 body {
-  font-family: "Cooper", Arial;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html {
+  font-size: 80%;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Cooper", system-ui, sans-serif;
 }
 
 #leftstripe {
@@ -186,10 +201,53 @@ body {
 .navbar-brand,
 .nav-link {
   color: #1c6e8c;
+  font-family: "Cooper", system-ui, sans-serif;
 }
 
 .navbar-toggler {
   border-radius: 30%;
+}
+
+@media screen and (max-width: 768px) {
+  .header-top {
+    display: grid !important;
+    grid-template-columns: 3.5rem 1fr 3.5rem;
+    min-height: 4.5rem;
+    align-items: center;
+    padding: 0 0.75rem;
+  }
+
+  .navbar-toggler.mobile-menu-toggle {
+    display: inline-flex;
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    margin: 0;
+    padding: 0.4rem;
+    border: 0;
+    background-color: #1c6e8c !important;
+  }
+
+  .mobile-menu-toggle .navbar-toggler-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .header-top > .d-flex.flex-column {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0 !important;
+  }
+
+  #leftstripe,
+  #rightstripe,
+  #twostripes {
+    display: none !important;
+  }
 }
 
 @media screen and (max-width: 480px) {

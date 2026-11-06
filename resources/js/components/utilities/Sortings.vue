@@ -16,6 +16,7 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 
 const sortedByRating = ref(false)
 const sortedByTime = ref(false)
@@ -57,15 +58,15 @@ const sortByTime = () => {
     if (!sortedByTime.value) { // si lieux pas encore triés par temps : tri croissant (+ court au + long)
 
         placesToBeSorted.sort((a, b) => {
-            if (a.temps < b.temps) return -1;
-            return a.temps > b.temps ? 1 : 0;
+            if (a.time < b.time) return -1;
+            return a.time > b.time ? 1 : 0;
         });
 
     } else { // si lieux déjà triés par temps : tri décroissant (+ long au - long)
 
         placesToBeSorted.sort((a, b) => {
-            if (a.temps > b.temps) return -1;
-            return a.temps < b.temps ? 1 : 0;
+            if (a.time > b.time) return -1;
+            return a.time < b.time ? 1 : 0;
         });
     }
 
@@ -86,7 +87,7 @@ const sortByDifficulty = () => {
 
     // on trie les lieux en 3 tableaux selon leur difficulté
     placesToBeSorted.forEach(place => {
-        switch (place.difficulte) {
+        switch (place.difficulty) {
             case ('famille'):
                 easyPlaces.push(place)
                 break

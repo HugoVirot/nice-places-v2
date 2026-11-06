@@ -153,20 +153,21 @@ onMounted(() => {
 </script>
 
 <template>
-	<div class="text-center">
+	<div class="text-center app-layout">
 
 		<!-- ******************************************* HEADER *********************************************** -->
 
 		<Header />
 
-		<div v-if="$route.path !== '/'">
-			<!-- si la route est différente de / (racine du site) -->
-			<!-- on affiche le template du composant concerné par la route -->
-			<router-view v-bind:key="$route.fullPath"></router-view>
-		</div>
+		<main class="app-content">
+			<div v-if="$route.path !== '/'">
+				<!-- si la route est différente de / (racine du site) -->
+				<!-- on affiche le template du composant concerné par la route -->
+				<router-view v-bind:key="$route.fullPath"></router-view>
+			</div>
 
-		<div v-else>
-			<!-- si la route est / => on affiche le code de l'accueil-->
+			<div v-else>
+				<!-- si la route est / => on affiche le code de l'accueil-->
 
 			<!-- ******************************************* SLIDER *********************************************** -->
 
@@ -198,7 +199,7 @@ onMounted(() => {
 
 			<div id="presentationBottomStripe" class="mb-3"></div>
 
-			<i class="greenIcon mt-5 mx-auto fa-3x fa-solid fa-map-location-dot"></i>
+			<i class="greenIcon mt-5 mx-auto fa-2x fa-solid fa-map-location-dot"></i>
 			<h2 class="fs-2 m-3"> Carte des lieux autour de chez vous</h2>
 
 
@@ -211,7 +212,7 @@ onMounted(() => {
 			<div class="container-fluid" v-if="!loading && placesStore.categories">
 
 				<div>
-					<i class="greenIcon mt-5 mx-auto fa-3x fa-solid fa-book-atlas"></i>
+					<i class="greenIcon mt-5 mx-auto fa-2x fa-solid fa-book-atlas"></i>
 					<h2 class="fs-2 m-3">Catégories</h2>
 				</div>
 
@@ -220,7 +221,7 @@ onMounted(() => {
 					<!-- ********************** boucle qui affiche les 3 catégories avec le + de lieux ************************* -->
 
 					<div v-for="(category, index) in placesStore.categories.slice(0, 3)" :key="category.id"
-						class="mx-auto col-md-6 col-lg-4 p-5 border border-white"
+						class="category-image-overlay mx-auto col-md-6 col-lg-4 p-5 border border-white"
 						:style="`background-image: url('/images/category${category.id}.jpg'); background-position: center; background-size: cover;`">
 
 						<p class="fs-2 m-auto text-white textWithShadow p-5">{{ category.name }}</p>
@@ -244,7 +245,7 @@ onMounted(() => {
 
 			<div v-if="placesStore.threeTopPlaces && placesStore.threeTopPlaces.length > 2">
 				<div>
-					<i class="greenIcon mt-5 mx-auto fa-3x fa-solid fa-star"></i>
+					<i class="greenIcon mt-5 mx-auto fa-2x fa-solid fa-star"></i>
 					<h2 v-if="department" class="fs-2 m-3">Le top des lieux dans votre département</h2>
 					<h2 v-else class="fs-2 m-3">Le top des lieux (France entière)</h2>
 				</div>
@@ -305,7 +306,7 @@ onMounted(() => {
 
 			<div v-if="placesStore.threeLastPlaces && placesStore.threeLastPlaces.length > 2">
 
-				<i class="greenIcon mt-5 mx-auto fa-3x fa-solid fa-clock"></i>
+				<i class="greenIcon mt-5 mx-auto fa-2x fa-solid fa-clock"></i>
 				<h2 v-if="department" class="fs-2 m-3"> Derniers places ajoutés dans votre département</h2>
 				<h2 v-else class="fs-2 m-3"> Derniers places ajoutés (France entière)</h2>
 
@@ -378,7 +379,7 @@ onMounted(() => {
 
 			<section id="inscrivezVous" class="mt-2">
 
-				<i class="greenIcon mt-5 mx-auto fa-3x fa-solid fa-user-plus"></i>
+				<i class="greenIcon mt-5 mx-auto fa-2x fa-solid fa-user-plus"></i>
 				<h2 class="fs-2 m-3">Inscrivez-vous gratuitement !</h2>
 
 				<div class="container-fluid px-5 mt-4">
@@ -406,15 +407,35 @@ onMounted(() => {
 			</section>
 
 		</div>
-	</div>
+		</main>
 
-	<!-- **************************************** FOOTER ******************************************** -->
+
 
 	<Footer />
+	</div>
 </template>
 
 <style>
 /******************* REGLES GENERALES ************/
+
+#app {
+	min-height: 100vh;
+}
+
+.app-layout {
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+}
+
+.app-content {
+	flex: 1 0 auto;
+}
+
+footer {
+	flex-shrink: 0;
+	margin-top: auto !important;
+}
 
 .blueElement {
 	color: #1c6e8c
@@ -467,6 +488,16 @@ h2 {
 	background-color: #94D1BE;
 }
 
+.greenButton,
+.blueButton {
+	font-family: "Cooper", system-ui, sans-serif;
+	font-weight: 700;
+}
+
+.greenButton {
+	color: #1C6E8C;
+}
+
 .greenButton:hover {
 	color: white;
 	background-color: #1C6E8C;
@@ -479,13 +510,17 @@ h2 {
 
 .blueButton:hover {
 	color: white;
-	background-color: #94D1BE;
+	background-color: #1C6E8C;
 }
 
 /************* ombres ************/
 
 .textWithShadow {
 	text-shadow: 2px 2px 4px #1C6E8C;
+}
+
+.category-image-overlay {
+	font-family: "Cooper", system-ui, sans-serif;
 }
 
 .iconWithShadow {
@@ -495,12 +530,12 @@ h2 {
 /************* Textes et polices ************/
 
 .bigFontSize {
-	font-size: 2.5em;
+	font-size: 2em;
 }
 
 .bigFontSize2 {
 	margin-top: -4vh;
-	font-size: 4em;
+	font-size: 3em;
 }
 
 .blueElement {
@@ -615,7 +650,7 @@ p {
 
 	.bigFontSize2 {
 		margin-top: -3vh;
-		font-size: 3em;
+		font-size: 2.5em;
 	}
 }
 
@@ -678,7 +713,7 @@ p {
 
 @media screen and (max-width: 768px) {
 	.bigFontSize {
-		font-size: 2em;
+		font-size: 1.75em;
 	}
 }
 </style>

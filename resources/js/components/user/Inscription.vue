@@ -55,8 +55,9 @@
                                 <div class="col-md-6">
                                     <select id="department" v-model="department" name="department"
                                         class="form-select mx-auto" aria-label="filtre" autocomplete="department">
-                                        <option v-for="department in departments" :value="department.id">
-                                            {{ department.code }} - {{ department.nom }}
+                                        <option v-for="department in placesStore.departments || []" :key="department.id"
+                                            :value="department.id">
+                                            {{ department.code }} - {{ department.name }}
                                         </option>
                                     </select>
                                 </div>
@@ -186,10 +187,13 @@
 
 <script setup>
 import axios from 'axios'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import ValidationErrors from "../utilities/ValidationErrors.vue"
 import { usePlacesStore } from "../../stores/placesStore.js"
 
 const placesStore = usePlacesStore()
+const router = useRouter()
 
 const pseudo = ref('')
 const email = ref('')
@@ -207,28 +211,31 @@ const validationErrors = ref("")
 const politique = ref(false)
 
 const sendData = () => {
-
     axios.post('/api/register', {
-        pseudo: this.pseudo, email: this.email, department: this.department,
-        password: this.password, password_confirmation: this.password_confirmation
+        name: pseudo.value,
+        pseudo: pseudo.value,
+        email: email.value,
+        department: department.value || null,
+        password: password.value,
+        password_confirmation: password_confirmation.value
     })
         .then(response => {
-
-            let message = response.data.message
-            // on enregistre une notification de confirmation à destination de l'utilisateur
-            this.createNotification(response.data.data.id)
-
-            this.$router.push('/successmessage/connexion/' + message);
+            createNotification(response.data.data.id)
+            router.push('/successmessage/connexion/' + response.data.message)
         })
         .catch((error) => {
-            this.validationErrors = error.response.data.errors;
+            if (error.response?.data?.errors) {
+                validationErrors.value = error.response.data.errors
+                return
+            }
+
+            alert("L'inscription a échoué. Vérifiez votre connexion et réessayez.")
         })
-    }
+}
 
 const createNotification = userId => {
-
-    let titre = `Bienvenue sur Nice Places ${this.pseudo} !`;
-    let message = `<p class="text-secondary">Bonjour ${this.pseudo} et bienvenue sur Nice Places !<br>
+    const titre = `Bienvenue sur Nice Places ${pseudo.value} !`
+    const message = `<p class="text-secondary">Bonjour ${pseudo.value} et bienvenue sur Nice Places !<br>
             Votre inscription est réussie.<br>
             <i style="color:#94D1BE" class="mx-auto my-3 fa-solid fa-door-open fa-5x"></i><br>
             Venez découvrir la France et partager vos lieux préférés avec nous !<br>
@@ -236,49 +243,23 @@ const createNotification = userId => {
             <p class="text-end">L'administrateur.</p>`
 
     axios.post('/api/notifications', { titre: titre, message: message, user_id: userId, lieu_id: null })
-        .then(response => console.log(response.data.message))
         .catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
             alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
         })
-    }
+}
 
 const checkPassword = password => {
-
-    this.passwordTyped = true
-
-    if (password.length >= 8) {
-        this.eightCharacters = true
-    } else {
-        this.eightCharacters = false
-    }
-
-    if (password.match(/[a-z]/)) {
-        this.oneLetter = true
-    } else {
-        this.oneLetter = false
-    }
-
-    if (password.match(/(?=.*[a-z])(?=.*[A-Z])/)) {
-        this.oneUppercaseOneLowercase = true
-    } else {
-        this.oneUppercaseOneLowercase = false
-    }
-
-    if (password.match(/\d/)) {
-        this.oneDigit = true
-    } else {
-        this.oneDigit = false;
-    }
-
-    if (password.match(/[!@#$%^&*?]/)) {
-        this.oneSpecialCharacter = true
-    } else {
-        this.oneSpecialCharacter = false;
-    }
-
-    if (this.eightCharacters && this.oneLetter && this.oneUppercaseOneLowercase && this.oneDigit && this.oneSpecialCharacter) {
-        this.passwordCorrect = true
-    }
+    passwordTyped.value = true
+    eightCharacters.value = password.length >= 8
+    oneLetter.value = /[a-z]/.test(password)
+    oneUppercaseOneLowercase.value = /(?=.*[a-z])(?=.*[A-Z])/.test(password)
+    oneDigit.value = /\d/.test(password)
+    oneSpecialCharacter.value = /[!@#$%^&*?]/.test(password)
+    passwordCorrect.value = eightCharacters.value
+        && oneLetter.value
+        && oneUppercaseOneLowercase.value
+        && oneDigit.value
+        && oneSpecialCharacter.value
 }
 </script>
 

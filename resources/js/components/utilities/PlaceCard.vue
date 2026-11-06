@@ -1,6 +1,6 @@
 <template>
-    <router-link :to="`/place/${place.id}`">
-        <div class="card card35vh text-white p-2" :style="`background-image: url(/images/${place.cover_image[0] ? place.cover_image[0].nom : 'defaultpicture.jpg'
+    <router-link :to="`/lieu/${place.id}`">
+        <div class="card card35vh text-white p-2" :style="`background-image: url(/images/${place.cover_image?.[0]?.name || 'defaultpicture.jpg'
             }); background-position: center; background-size: cover;`">
 
             <div class="p-2 textWithShadow d-flex flex-column justify-content-between">

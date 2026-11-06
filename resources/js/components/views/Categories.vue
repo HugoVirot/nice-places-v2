@@ -7,7 +7,7 @@
 
     <div class="container-fluid p-3 p-lg-5">
         <div class="row">
-            <div class="col-lg-6 border border-3 border-white card card35vh text-white" v-for="category in placesStore.categories"
+            <div class="category-image-overlay col-lg-6 border border-3 border-white card card35vh text-white" v-for="category in placesStore.categories"
                 :key="category.id"
                 :style="`background-image: url(images/category${category.id}.jpg); background-position: center; background-size: cover;`">
 

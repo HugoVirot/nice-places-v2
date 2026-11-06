@@ -1,5 +1,10 @@
 <template>
-    <div id="carouselAccueil" class="carousel slide carousel-fade container" data-bs-ride="carousel">
+    <div
+        id="carouselAccueil"
+        class="carousel slide carousel-fade"
+        data-bs-ride="carousel"
+        :style="{ height: sliderHeight, '--mobile-slide-width': mobileSlideWidth }"
+    >
 
         <div class="carousel-inner">
 
@@ -11,7 +16,11 @@
                     <router-link to="/carte"><button class="btn btn-lg greenButton">Voir la carte des lieux</button>
                     </router-link>
                 </div>
-                <h2 class="carousel-caption d-block d-md-none fs-1">Redécouvrez votre région !</h2>
+                <div class="carousel-caption captionfondbleu mobile-caption d-md-none">
+                    <h2>Redécouvrez votre région !</h2>
+                    <p>Vous serez étonné(e) par les nombreux lieux extraordinaires qu'elle propose.</p>
+                    <router-link to="/carte"><button class="btn greenButton">Voir la carte des lieux</button></router-link>
+                </div>
             </div>
 
             <div class="carousel-item">
@@ -23,7 +32,11 @@
                     <router-link to="/proposerlieu"><button class="btn btn-lg greenButton">Partager un lieu</button>
                     </router-link>
                 </div>
-                <h2 class="carousel-caption d-block d-md-none fs-1">Partagez vos coups de coeur</h2>
+                <div class="carousel-caption captionfondbleu mobile-caption d-md-none">
+                    <h2>Partagez vos coups de coeur !</h2>
+                    <p>Faites profiter la communauté de vos petits coins de paradis.</p>
+                    <router-link to="/proposerlieu"><button class="btn greenButton">Partager un lieu</button></router-link>
+                </div>
             </div>
 
             <div class="carousel-item">
@@ -35,7 +48,11 @@
                     <router-link to="/categories"><button class="btn btn-lg greenButton">Explorer les catégories</button>
                     </router-link>
                 </div>
-                <h2 class="carousel-caption d-block d-md-none fs-1 ">Destination nature !</h2>
+                <div class="carousel-caption captionfondbleu mobile-caption d-md-none">
+                    <h2>Destination nature !</h2>
+                    <p>Il y a toujours une nouvelle sortie sur Nice Places !</p>
+                    <router-link to="/categories"><button class="btn greenButton">Explorer les catégories</button></router-link>
+                </div>
             </div>
 
             <div class="carousel-indicators">
@@ -61,8 +78,52 @@
     </div>
 </template>
 
+<script setup>
+import { onBeforeUnmount, onMounted, ref } from 'vue';
+
+const sliderHeight = ref('100dvh');
+const mobileSlideWidth = ref('75dvh');
+
+const updateSliderSize = () => {
+    const headerHeight = document.querySelector('header')?.getBoundingClientRect().height ?? 0;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const height = Math.max(viewportHeight - headerHeight, 0);
+
+    sliderHeight.value = `${height}px`;
+    mobileSlideWidth.value = `${height * 0.75}px`;
+};
+
+onMounted(() => {
+    updateSliderSize();
+    window.addEventListener('resize', updateSliderSize);
+    window.visualViewport?.addEventListener('resize', updateSliderSize);
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener('resize', updateSliderSize);
+    window.visualViewport?.removeEventListener('resize', updateSliderSize);
+});
+</script>
 
 <style scoped>
+#carouselAccueil {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+}
+
+.carousel-inner,
+.carousel-item {
+    height: 100%;
+}
+
+.carousel-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 .carouselAccueil h2 {
     color: white !important
 }
@@ -80,5 +141,41 @@ h2 {
     font-size: 3.8vw;
     z-index: 1;
     color: white;
+}
+
+@media (max-width: 767.98px) {
+    .carousel-item > .mobile-caption {
+        top: 5%;
+        bottom: auto;
+        left: 8%;
+        right: 8%;
+        width: auto;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        transform: none;
+    }
+
+    .mobile-caption h2 {
+        margin-bottom: 0.5rem;
+        font-size: clamp(2rem, 8vw, 2.75rem);
+    }
+
+    .mobile-caption p {
+        margin-bottom: 0.75rem;
+        font-size: 1rem;
+    }
+
+    .mobile-caption .btn {
+        font-size: 0.95rem;
+    }
+
+    .carousel-item img {
+        position: relative;
+        left: 50%;
+        width: 75vh;
+        width: var(--mobile-slide-width, 75dvh);
+        max-width: none;
+        transform: translateX(-50%);
+    }
 }
 </style>

@@ -125,7 +125,6 @@ const addPlaceMarkers = () => {
 
         const rating = document.createElement('span');
         rating.className = 'fs-5 text-secondary';
-        rating.style.fontFamily = 'Cooper';
         rating.textContent = place.note;
         ratingRow.appendChild(rating);
         popup.appendChild(ratingRow);
@@ -146,7 +145,6 @@ const addPlaceMarkers = () => {
 
         const address = document.createElement('p');
         address.className = 'text-center text-secondary';
-        address.style.fontFamily = 'Cooper';
         address.append(document.createTextNode(place.adress || ''));
         address.appendChild(document.createElement('br'));
         address.append(document.createTextNode(`${place.postcode || ''} ${place.city || ''}`.trim()));

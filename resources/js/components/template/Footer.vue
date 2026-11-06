@@ -1,5 +1,5 @@
 <template>
-    <footer class="container-fluid greenBackground text-center p-5 mt-5">
+    <footer class="container-fluid greenBackground text-center p-5">
         <img id="logoFooter" src="../../../../public/images/logo2.png" alt="logo alternatif nice places (footer)">
         <p class="text-white fs-4">sorties nature près de chez vous</p>
         <p><router-link to="/politique">mentions légales / politique de confidentialité</router-link> | 

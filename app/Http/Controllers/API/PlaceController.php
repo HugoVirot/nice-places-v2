@@ -116,11 +116,7 @@ class PlaceController extends BaseController
      */
     public function show(Place $lieu)
     {
-        $lieu->load(['reviews' => function ($query) {
-            $query->latest()->get();
-        }]);
-
-        $lieu->load('users');
+        $lieu->load(['reviews.user', 'images']);
         return $this->sendResponse($lieu, 'Lieu récupéré avec succès');
     }
 

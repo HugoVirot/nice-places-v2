@@ -8,7 +8,7 @@
 
         <ValidationErrors :errors="validationErrors" v-if="validationErrors" />
 
-        <div v-if="id" class="row justify-content-center p-2 p-lg-4">
+        <div v-if="userStore.id" class="row justify-content-center p-2 p-lg-4">
             <div class="col-md-8">
 
                 <div class="card">
@@ -60,21 +60,26 @@
 </template>
 
 <script setup>
+import axios from 'axios'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from "../../stores/userStore"
 import ValidationErrors from "./ValidationErrors.vue"
+
+const userStore = useUserStore()
+const router = useRouter()
+const props = defineProps(['place_id'])
 
 const note = ref('')
 const comment = ref('')
 const validationErrors = ref('')
 
-defineProps(['place_id'])
-
 const sendData = () => {
-    axios.post('/api/avis', { note: note.value, comment: comment.value, place_id: place_id.value, user_id: userStore.id })
+    axios.post('/api/reviews', { note: note.value, comment: comment.value, place_id: props.place_id, user_id: userStore.id })
         .then((response) => {
-            this.$router.push('/successmessage/lastpage/' + response.data.message);
+            router.push('/successmessage/lastpage/' + response.data.message);
         }).catch((error) => {
-            this.validationErrors = error.response.data.errors;
+            validationErrors.value = error.response.data.errors;
         })
 }
 </script>

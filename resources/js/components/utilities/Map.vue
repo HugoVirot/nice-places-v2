@@ -1,21 +1,50 @@
 <template>
-    <div id="map" ref="mapElement"></div>
+    <div id="map" ref="mapElement">
+        <fieldset
+            v-if="placesStore.categories?.length"
+            class="map-category-filters"
+            @click.stop
+            @dblclick.stop
+            @mousedown.stop
+            @touchstart.stop
+            @wheel.stop
+        >
+            <legend>Types de lieux</legend>
+            <label v-for="category in placesStore.categories" :key="category.id">
+                <input v-model="selectedCategoryIds" type="checkbox" :value="String(category.id)">
+                <span class="map-category-icon" :style="{ color: category.color || '#1c6e8c' }"
+                    v-html="category.icon"></span>
+                <span>{{ category.name }}</span>
+            </label>
+        </fieldset>
+        <div v-if="requiresSecureContext" class="geolocation-warning" role="alert">
+            <p>La géolocalisation est bloquée en HTTP par le navigateur.</p>
+            <a :href="httpsUrl">Ouvrir cette page en HTTPS</a>
+            <small>Activez d’abord SSL dans Laragon (Menu &gt; Apache &gt; SSL).</small>
+        </div>
+    </div>
 </template>
 
 <script setup>
 import { useUserStore } from "../../stores/userStore";
 import { usePlacesStore } from '../../stores/placesStore';
+import { useRouter } from 'vue-router';
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 const userStore = useUserStore();
 const placesStore = usePlacesStore();
+const router = useRouter();
 const mapElement = ref(null);
+const requiresSecureContext = ref(false);
+const httpsUrl = window.location.href.replace(/^http:/, 'https:');
+const selectedCategoryIds = ref([]);
 
 const props = defineProps(['singlePlace']);
 let leafletMap = null;
 let placesLayer = null;
 let userMarker = null;
 let fullscreenButton = null;
+let mapMounted = false;
 
 const updateFullscreenButton = () => {
     if (!fullscreenButton) return;
@@ -68,6 +97,9 @@ const addPlaceMarkers = () => {
         if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
 
         const category = place.category ?? placesStore.categories?.find(item => item.id === place.category_id);
+        const categoryId = category?.id ?? place.category_id;
+        if (Array.isArray(placesStore.categories) && !selectedCategoryIds.value.includes(String(categoryId))) return;
+
         const markerOptions = category?.icon ? {
             icon: L.divIcon({
                 html: `<span style="color:${category.color || '#1c6e8c'}">${category.icon}</span>`,
@@ -121,9 +153,13 @@ const addPlaceMarkers = () => {
         popup.appendChild(address);
 
         const detailsLink = document.createElement('a');
-        detailsLink.href = `/place/${place.id}`;
+        detailsLink.href = `/lieu/${place.id}`;
         detailsLink.className = 'btn btn-lg greenButton';
         detailsLink.textContent = "Plus d'infos";
+        detailsLink.addEventListener('click', event => {
+            event.preventDefault();
+            router.push(detailsLink.getAttribute('href'));
+        });
         popup.appendChild(detailsLink);
 
         L.marker([latitude, longitude], markerOptions)
@@ -175,15 +211,31 @@ const initializeMap = () => {
 };
 
 watch(
-    [() => placesStore.places, () => placesStore.categories],
+    [() => placesStore.places, () => placesStore.categories, selectedCategoryIds],
     addPlaceMarkers
 );
 
+watch(
+    () => placesStore.categories,
+    categories => {
+        if (Array.isArray(categories)) {
+            selectedCategoryIds.value = categories.map(category => String(category.id));
+        }
+    },
+    { immediate: true }
+);
+
 onMounted(() => {
+    mapMounted = true;
     document.addEventListener('fullscreenchange', updateFullscreenButton);
     initializeMap();
 
     if (props.singlePlace) {
+        return;
+    }
+
+    if (!window.isSecureContext) {
+        requiresSecureContext.value = true;
         return;
     }
 
@@ -194,6 +246,8 @@ onMounted(() => {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude
             });
+            if (!mapMounted || !leafletMap) return;
+
             const coordinates = [position.coords.latitude, position.coords.longitude];
             leafletMap.setView(coordinates, 13);
             userMarker = L.marker(coordinates).addTo(leafletMap);
@@ -206,12 +260,14 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+    mapMounted = false;
     document.removeEventListener('fullscreenchange', updateFullscreenButton);
     if (document.fullscreenElement === mapElement.value) {
         document.exitFullscreen?.();
     }
     mapElement.value?.classList.remove('map-fullscreen');
     leafletMap?.remove();
+    leafletMap = null;
 });
 </script>
 
@@ -219,6 +275,67 @@ onBeforeUnmount(() => {
 #map {
     height: 75vh;
     margin: auto;
+}
+
+.geolocation-warning {
+    position: absolute;
+    z-index: 1000;
+    top: 10px;
+    left: 50%;
+    display: grid;
+    gap: 0.25rem;
+    max-width: min(90%, 28rem);
+    padding: 0.75rem 1rem;
+    transform: translateX(-50%);
+    border-radius: 0.25rem;
+    background: white;
+    box-shadow: 0 1px 5px rgb(0 0 0 / 40%);
+    text-align: center;
+}
+
+.map-category-filters {
+    position: absolute;
+    z-index: 1000;
+    top: 10px;
+    left: 10px;
+    display: grid;
+    max-height: min(45vh, 20rem);
+    gap: 0.35rem;
+    overflow-y: auto;
+    padding: 0.5rem 0.75rem;
+    border: 0;
+    border-radius: 0.25rem;
+    background: white;
+    box-shadow: 0 1px 5px rgb(0 0 0 / 40%);
+}
+
+.map-category-filters legend {
+    float: none;
+    width: auto;
+    margin: 0;
+    color: #1c6e8c;
+    font-weight: 700;
+}
+
+.map-category-filters label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #1c6e8c;
+    cursor: pointer;
+}
+
+.map-category-icon {
+    min-width: 1.25rem;
+    text-align: center;
+}
+
+.map-category-filters input {
+    accent-color: #94D1BE;
+}
+
+.geolocation-warning p {
+    margin: 0;
 }
 
 #map:fullscreen {

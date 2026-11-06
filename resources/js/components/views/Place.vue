@@ -1,10 +1,11 @@
 <template>
-    <div v-if="!loading">
+    <LoadingSpinner v-if="loading" />
+    <div v-else-if="place">
 
         <div class="pt-5 pb-2">
             <!-- <i class="greenIcon mx-auto fa-3x fa-solid fa-map-location-dot"></i> -->
             <p class="fs-5">catégorie :<span class="greenIcon p-2 ms-2 fa-2x" :style="{ color: place.category.color }"
-                    v-html="place.category.icone"></span>{{
+                    v-html="place.category.icon"></span>{{
                         place.category.name
                     }}</p>
             <h1 class="mt-2">{{ place.name }}</h1>
@@ -24,7 +25,7 @@
                                 }}</span></p>
                     </div>
 
-                    <div v-if="userLoggedIn" class="col-md-4">
+                    <div v-if="userStore.userLoggedIn" class="col-md-4">
                         <i v-if="isInFavorites" @click="removeToFavorites"
                             class="greenIcon fa-solid fa-heart fa-2x"></i>
                         <i v-else @click="addToFavorites" class="greenIcon fa-regular fa-heart fa-2x"></i>
@@ -86,7 +87,7 @@
                     <p> <i class="fa-2x fa-solid fa-road me-3"></i>
                         {{ place.adress }}</p>
                     <p> <i class="fa-2x fa-solid fa-location-dot me-3"></i>
-                        {{ place.postcode + " " + place.ville.toUpperCase() }}</p>
+                        {{ place.postcode + " " + place.city.toUpperCase() }}</p>
                     <p> <i class="fa-2x fa-solid fa-hourglass-half me-3"></i>
                         {{ place.time }} heure(s)
                     </p>
@@ -120,7 +121,7 @@
         <h2 class="m-5">Avis sur ce lieu</h2>
 
         <div v-if="place.reviews.length > 0">
-            <div v-for="(review, index) in place.review">
+            <div v-for="(review, index) in place.reviews" :key="review.id">
 
                 <div class="container p-4 mb-3 border border-secondary" v-if="index + 1 <= 5">
 
@@ -234,16 +235,20 @@
 
         <PosterAvis :place_id="place.id" />
     </div>
+    <p v-else class="container py-5 text-center" role="alert">
+        Impossible de charger les détails de ce lieu.
+    </p>
 </template>
 
 <script setup>
 import axios from 'axios'
 import Map from '../utilities/Map.vue'
+import LoadingSpinner from '../utilities/LoadingSpinner.vue'
 import moment from 'moment';
 import PosterAvis from '../utilities/CreateReview.vue';
 import { useUserStore } from "../../stores/userStore"
 import { useRoute, useRouter } from 'vue-router';
-import { onBeforeMount } from 'vue';
+import { onBeforeMount, computed, ref } from 'vue';
 
 moment.locale('fr');
 
@@ -252,19 +257,18 @@ const route = useRoute()
 const router = useRouter()
 
 const isInFavorites = computed(() => {
-    // on retourne true si le place fait partie des favoris de l'utilisateur
-    // la fonction some permet de vérifier cela (on cherche un favori avec le name du place)
-    return favorites ? favorites.some(favorite => favorite.name === place.name) : null
+    return Array.isArray(userStore.favorites)
+        && userStore.favorites.some(favorite => favorite.name === place.value?.name)
 })
 
 const placeId = route.params.id
 const place = ref(null)
 const showAllReviews = ref(false)
 const showFullComment = ref(false)
-const loading = ref(null)
+const loading = ref(true)
 
 const addToFavorites = () => {
-    axios.post('/api/favorites', { place_id: placeId.value, user_id: userStore.id })
+    axios.post('/api/favorites', { place_id: placeId, user_id: userStore.id })
 
         .then(response => {
             let message = response.data.message
@@ -272,7 +276,7 @@ const addToFavorites = () => {
             axios.get('/api/favorites/' + userStore.id)
 
                 .then(response => {
-                    userStore.storeFavoris(response.data.data)
+                    userStore.storeFavorites(response.data.data)
                     router.push('/successmessagelastpage/' + message)
                 }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
                     alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
@@ -302,15 +306,13 @@ const removeToFavorites = () => {
 }
 
 onBeforeMount(() => {
-    // on initialise moment pour formater les dates
-    this.moment = moment
-
     // on récupère les infos du place (voir pour les passer en props)
     axios.get("/api/places/" + placeId)
         .then((response) => {
             place.value = response.data.data
             loading.value = false
         }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
+            loading.value = false
             alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
         })
 })

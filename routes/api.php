@@ -34,7 +34,8 @@ Route::put('users/{user}/updatepassword', [App\Http\Controllers\API\UserControll
 
 // **************************************** routes LIEUX ***************************************************
 
-Route::apiResource("places", App\Http\Controllers\API\PlaceController::class);
+Route::apiResource("places", App\Http\Controllers\API\PlaceController::class)
+    ->parameters(['places' => 'lieu']);
 
 //récupérer tous les lieux mêmes ceux non validés (pour l'admin)
 Route::get('getallplaces', [App\Http\Controllers\API\PlaceController::class, 'getAllPlaces'])->name('getallplaces');

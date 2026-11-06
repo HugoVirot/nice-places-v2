@@ -21,6 +21,12 @@ Laravel is a web application framework with expressive, elegant syntax. We belie
 
 Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
+## Géolocalisation en développement local
+
+Les navigateurs n’autorisent la géolocalisation que sur une origine sécurisée. `http://nice-places-v2.test` n’est pas considéré comme sécurisé (contrairement à `localhost`), donc aucune demande de permission ne peut y apparaître en HTTP.
+
+Avec Laragon, activez SSL via **Menu > Apache > SSL > Enabled**, puis redémarrez Apache et ouvrez **https://nice-places-v2.test**. Si Laragon vous demande d’installer ou de faire confiance à son certificat local, faites-le pour ce poste. Réglez également `APP_URL=https://nice-places-v2.test` dans `.env`. Il n’est pas nécessaire de lancer `php artisan serve` ni d’utiliser `127.0.0.1:8000`.
+
 ## Learning Laravel
 
 Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.

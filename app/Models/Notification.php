@@ -9,6 +9,10 @@ class Notification extends Model
 {
     use HasFactory;
 
+    protected $casts = [
+        'read' => 'boolean',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

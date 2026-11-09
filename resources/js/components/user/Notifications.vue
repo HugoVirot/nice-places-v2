@@ -22,62 +22,47 @@
             </div>
         </div>
 
-        <div v-if="showNotificationReadMessage">
-            <p class="text-white greenBackground rounded mx-auto w-25 p-3">Notification marquée comme lue</p>
-            <button class="btn greenButton" @click="hideMessage">OK</button>
-        </div>
+        <template v-for="notification in userStore.notifications" :key="notification.id">
+            <div class="container my-2">
+                <div class="accordion" :id="`notification${notification.id}`">
+                    <div class="accordion-item">
+                        <div class="accordion-header text-white">
+                            <button :id="`heading${notification.id}`" class="accordion-button mx-auto row" type="button" data-bs-toggle="collapse"
+                                :data-bs-target="`#message${notification.id}`" aria-expanded="false"
+                                :aria-controls="`message${notification.id}`"
+                                @click="markAsReadWhenOpened(notification, $event)">
+                                <p class="text-white col-lg-3">reçue le {{ notification.created_at?.substring(0, 10) }}</p>
+                                <h3 class="col-lg-7">{{ notification.title }}</h3>
+                                <div v-if="!notification.read" class="text-white col-lg-2">
+                                    <i class="fa-solid fa-2x fa-circle-exclamation text-danger me-2"></i>Non lue
+                                </div>
+                            </button>
+                        </div>
 
-        <div class="container my-2" v-if="userStore.notifications.length > 0"
-            v-for="notification in userStore.notifications">
-
-
-            <!-- <p class="text-dark">{{ moment(notification.created_at).format("ddd DD MMM YYYY [à]HH:mm") }}</p> -->
-
-            <div class="accordion" :id="`notification${notification.id}`">
-                <div class="accordion-item">
-
-                    <div class="accordion-header text-white" id="headingOne">
-                        <button class="accordion-button mx-auto row" type="button" data-bs-toggle="collapse"
-                            :data-bs-target="`#message${notification.id}`" aria-expanded="false"
-                            :aria-controls="`message${notification.id}`">
-
-                            <p class="text-white col-lg-3">reçue le {{ notification.created_at.substring(0, 10) }}</p>
-
-                            <h3 class="col-lg-7">{{ notification.titre }}</h3>
-
-                            <div v-if="!notification.read" class="text-white col-lg-2"><i
-                                    class="fa-solid fa-2x fa-circle-exclamation text-danger me-2"></i>Non lue</div>
-                        </button>
-                    </div>
-
-                    <div :id="`message${notification.id}`" class="accordion-collapse collapse"
-                        aria-labelledby="headingOne" :data-bs-parent="`#notification${notification.id}`">
-                        <div class="accordion-body">
-                            <p class="text-center notificationMessage p-2" v-html="notification.message"></p>
-                            <button v-if="!notification.lue" class="btn greenButton mx-auto"
-                                @click="markNotificationAsRead(notification.id)">OK (marquer comme lue)</button>
+                        <div :id="`message${notification.id}`" class="accordion-collapse collapse"
+                            :aria-labelledby="`heading${notification.id}`"
+                            :data-bs-parent="`#notification${notification.id}`">
+                            <div class="accordion-body">
+                                <p class="text-center notificationMessage p-2" v-html="notification.message"></p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-
-        </div>
-        <div v-else>
+        </template>
+        <div v-if="!userStore.notifications.length">
             <p>Vous n'avez aucune notification.</p>
         </div>
     </section>
 </template>
 
 <script setup>
+import axios from "axios"
 import { useUserStore } from "../../stores/userStore"
-import { useRouter } from "vue-router"
 import { onBeforeMount, ref } from "vue";
 
 const userStore = useUserStore()
-const router = useRouter()
-const showFullMessage = ref(false)
-const showNotificationReadMessage = ref(false)
-
+const markingNotificationIds = ref(new Set())
 
 // récupérer les notifications de l'utilisateur en fonction de son id
 const getNotifications = () => {
@@ -89,21 +74,18 @@ const getNotifications = () => {
         })
 }
 
-// marquer une notification comme lue
-const markNotificationAsRead = notificationId => {
-    axios.put('/api/notifications/' + notificationId)
-        .then(() => {
-            showNotificationReadMessage.value = true
-            getNotifications()
-            router.push('/mesnotifications')
+const markAsReadWhenOpened = notification => {
+    if (notification.read || markingNotificationIds.value.has(notification.id)) return
+
+    markingNotificationIds.value.add(notification.id)
+    axios.put(`/api/notifications/${notification.id}`)
+        .then(response => {
+            notification.read = response.data.data.read
         }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
             alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
+        }).finally(() => {
+            markingNotificationIds.value.delete(notification.id)
         })
-}
-
-const hideMessage = () => {
-    setTimeout(() => { 
-        showNotificationReadMessage.value = false}, 3000)
 }
 
 onBeforeMount(() => {

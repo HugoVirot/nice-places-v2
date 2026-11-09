@@ -81,7 +81,7 @@
                     <table class="table align-middle admin-table">
                         <thead><tr><th>Lieu</th><th>Statut</th><th>Note</th><th>Ville</th><th>Auteur</th><th>Actions</th></tr></thead>
                         <tbody>
-                            <template v-for="place in places" :key="place.id">
+                            <template v-for="place in sortedPlaces" :key="place.id">
                                 <tr>
                                     <td><router-link :to="`/lieu/${place.id}`">{{ place.name }}</router-link></td>
                                     <td><StatusBadge :status="place.status" /></td><td>{{ place.note }}</td>
@@ -89,28 +89,6 @@
                                     <td class="text-nowrap">
                                         <button class="btn btn-link p-0 me-3" @click="editPlace(place)" aria-label="Modifier le lieu"><i class="fa-solid fa-pen-to-square greenIcon"></i></button>
                                         <button class="btn btn-link text-danger p-0" @click="removeItem('places', place)" aria-label="Supprimer le lieu"><i class="fa-solid fa-trash"></i></button>
-                                    </td>
-                                </tr>
-                                <tr v-if="editingPlace?.id === place.id">
-                                    <td colspan="6">
-                                        <form class="row g-2 editor-row" @submit.prevent="savePlace">
-                                            <div class="col-md-6"><label class="form-label">Nom</label><input v-model="editingPlace.name" class="form-control" required minlength="10" maxlength="100"></div>
-                                            <div class="col-md-3"><label class="form-label">Catégorie</label><select v-model="editingPlace.category_id" class="form-select" required><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select></div>
-                                            <div class="col-md-3"><label class="form-label">Statut</label><select v-model="editingPlace.status" class="form-select"><option v-for="status in placeStatuses" :key="status" :value="status">{{ status }}</option></select></div>
-                                            <div class="col-12"><label class="form-label">Description</label><textarea v-model="editingPlace.description" class="form-control" required minlength="25" maxlength="3000" rows="2"></textarea></div>
-                                            <div class="col-md-2"><label class="form-label">Latitude</label><input v-model.number="editingPlace.latitude" type="number" step="any" min="-90" max="90" class="form-control" required></div>
-                                            <div class="col-md-2"><label class="form-label">Longitude</label><input v-model.number="editingPlace.longitude" type="number" step="any" min="-180" max="180" class="form-control" required></div>
-                                            <div class="col-md-2"><label class="form-label">Note</label><input v-model.number="editingPlace.note" type="number" step="0.1" min="1" max="10" class="form-control" required></div>
-                                            <div class="col-md-2"><label class="form-label">Durée (h)</label><input v-model.number="editingPlace.time" type="number" min="1" max="24" class="form-control" required></div>
-                                            <div class="col-md-2"><label class="form-label">Difficulté</label><select v-model="editingPlace.difficulty" class="form-select"><option>famille</option><option>amateur</option><option>sportif</option></select></div>
-                                            <div class="col-md-2"><label class="form-label">Distance (km)</label><input v-model.number="editingPlace.kilometres" type="number" min="1" max="100" class="form-control"></div>
-                                            <div class="col-md-3"><label class="form-label">Département (ID)</label><input v-model.number="editingPlace.department_id" type="number" min="1" class="form-control" required></div>
-                                            <div class="col-md-3"><label class="form-label">Adresse</label><input v-model="editingPlace.adress" class="form-control" required minlength="5" maxlength="75"></div>
-                                            <div class="col-md-2"><label class="form-label">Code postal</label><input v-model="editingPlace.postcode" class="form-control" required pattern="[0-9A-Za-z]{5}" maxlength="5"></div>
-                                            <div class="col-md-4"><label class="form-label">Ville</label><input v-model="editingPlace.city" class="form-control" required minlength="3" maxlength="50"></div>
-                                            <div class="col-12"><label class="form-label">Message à l’auteur / raison d’un refus</label><textarea v-model="editingPlace.comment" class="form-control" maxlength="1000" rows="2" placeholder="Obligatoire pour demander une modification ou refuser"></textarea></div>
-                                            <div class="col-12"><button class="btn greenButton me-2" :disabled="saving">Enregistrer</button><button type="button" class="btn btn-outline-secondary" @click="editingPlace = null">Annuler</button></div>
-                                        </form>
                                     </td>
                                 </tr>
                             </template>
@@ -126,7 +104,7 @@
                     <table class="table align-middle admin-table">
                         <thead><tr><th>Lieu</th><th>Auteur</th><th>Note</th><th>Commentaire</th><th>Statut</th><th>Actions</th></tr></thead>
                         <tbody>
-                            <template v-for="review in reviews" :key="review.id">
+                            <template v-for="review in sortedReviews" :key="review.id">
                                 <tr>
                                     <td>{{ review.place?.name || 'Lieu supprimé' }}</td><td>{{ review.user?.name || 'Compte supprimé' }}</td>
                                     <td>{{ review.note }}/10</td><td>{{ review.comment || '—' }}</td><td><StatusBadge :status="review.status" /></td>
@@ -154,12 +132,18 @@
 
             <section v-else-if="activePanel === 'images'">
                 <h2>Gestion des images et images proposées</h2>
+                <p v-if="imageSuccess" class="alert alert-success" role="status">{{ imageSuccess }}</p>
                 <div class="table-responsive">
                     <table class="table align-middle admin-table">
                         <thead><tr><th>Aperçu</th><th>Lieu</th><th>Auteur</th><th>Statut</th><th>Couverture</th><th>Actions</th></tr></thead>
                         <tbody>
-                            <tr v-for="image in images" :key="image.id">
-                                <td><img :src="`/images/${image.name}`" :alt="image.name" class="admin-image"></td>
+                            <tr v-for="image in sortedImages" :key="image.id">
+                                <td>
+                                    <button type="button" class="image-preview-button"
+                                        :aria-label="`Afficher ${image.name} en grand`" @click="previewImage(image)">
+                                        <img :src="`/images/${image.name}`" :alt="image.name" class="admin-image">
+                                    </button>
+                                </td>
                                 <td>{{ image.place?.name || '—' }}</td><td>{{ image.user?.name || 'Compte supprimé' }}</td>
                                 <td><StatusBadge :status="image.status" /></td>
                                 <td><input v-model="image.cover" type="checkbox" class="form-check-input" :aria-label="`Image de couverture ${image.name}`"></td>
@@ -192,12 +176,25 @@
                 </div>
             </section>
         </template>
+
+        <div v-if="previewedImage" class="image-modal-backdrop" role="presentation" @click.self="closeImagePreview">
+            <section class="image-modal" role="dialog" aria-modal="true"
+                :aria-label="`Aperçu de ${previewedImage.name}`">
+                <button type="button" class="image-modal-close" aria-label="Fermer l’aperçu"
+                    @click="closeImagePreview">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+                <img :src="`/images/${previewedImage.name}`" :alt="previewedImage.name" class="image-modal-picture">
+                <button type="button" class="btn btn-light rounded-pill" @click="closeImagePreview">Fermer</button>
+            </section>
+        </div>
     </main>
 </template>
 
 <script setup>
 import axios from "axios"
 import { computed, defineComponent, h, onMounted, reactive, ref } from "vue"
+import { useRouter } from "vue-router"
 import { useUserStore } from "../../stores/userStore"
 import { usePlacesStore } from "../../stores/placesStore"
 import LoadingSpinner from "../utilities/LoadingSpinner.vue"
@@ -222,11 +219,13 @@ const StatusBadge = defineComponent({
 
 const userStore = useUserStore()
 const placesStore = usePlacesStore()
+const router = useRouter()
 const isAdmin = computed(() => Number(userStore.roleId) === 2 || (!userStore.roleId && userStore.role === "admin"))
 const loading = ref(true)
 const saving = ref(false)
 const error = ref("")
 const success = ref("")
+const imageSuccess = ref("")
 const activePanel = ref("places")
 const places = ref([])
 const categories = ref([])
@@ -234,14 +233,28 @@ const reviews = ref([])
 const users = ref([])
 const images = ref([])
 const editingCategory = ref(null)
-const editingPlace = ref(null)
 const editingReview = ref(null)
+const previewedImage = ref(null)
 const categoryImageInputs = ref({})
 const newCategoryImage = ref(null)
 const newCategory = reactive({ name: "", icon: "", color: "" })
-const placeStatuses = ["en attente", "validé", "à modifier", "refusé"]
 const reviewStatuses = ["en attente", "validé", "refusé"]
 const imageStatuses = ["en attente", "validée", "refusée"]
+
+const sortPendingFirstById = (items, pendingStatuses) => [...items].sort((a, b) => {
+    const aIsPending = pendingStatuses.includes(a.status)
+    const bIsPending = pendingStatuses.includes(b.status)
+
+    if (aIsPending !== bIsPending) return aIsPending ? -1 : 1
+    return Number(a.id) - Number(b.id)
+})
+
+const sortedPlaces = computed(() => sortPendingFirstById(places.value, ["en attente", "à modifier"]))
+const sortedReviews = computed(() => sortPendingFirstById(reviews.value, ["en attente"]))
+const sortedImages = computed(() => sortPendingFirstById(images.value, ["en attente"]))
+
+const previewImage = image => { previewedImage.value = image }
+const closeImagePreview = () => { previewedImage.value = null }
 
 const panels = computed(() => [
     { key: "categories", label: "Catégories", icon: "fa-rectangle-list", pending: 0 },
@@ -336,33 +349,7 @@ const uploadSelectedCategoryImage = async category => {
     if (await uploadCategoryImage(category, input?.files?.[0]) && input) input.value = ""
 }
 
-const editPlace = place => {
-    clearFeedback()
-    editingPlace.value = {
-        ...place,
-        category_id: place.category_id ?? place.category?.id
-    }
-}
-
-const savePlace = async () => {
-    if (["à modifier", "refusé"].includes(editingPlace.value.status) && !editingPlace.value.comment?.trim()) {
-        error.value = "Ajoutez un message pour demander des modifications ou refuser ce lieu."
-        return
-    }
-    saving.value = true
-    clearFeedback()
-    try {
-        const response = await axios.put(`/api/places/${editingPlace.value.id}`, editingPlace.value)
-        const index = places.value.findIndex(place => place.id === response.data.data.id)
-        places.value.splice(index, 1, response.data.data)
-        editingPlace.value = null
-        success.value = response.data.message
-    } catch (requestError) {
-        showRequestError(requestError, "Impossible d'enregistrer le lieu.")
-    } finally {
-        saving.value = false
-    }
-}
+const editPlace = place => router.push(`/modifierlieu/${place.id}`)
 
 const editReview = review => {
     clearFeedback()
@@ -386,13 +373,24 @@ const saveReview = async () => {
 
 const saveImage = async image => {
     clearFeedback()
+    imageSuccess.value = ""
+    saving.value = true
     try {
         const response = await axios.put(`/api/images/${image.id}`, { cover: image.cover, status: image.status })
         const index = images.value.findIndex(entry => entry.id === image.id)
-        images.value.splice(index, 1, response.data.data)
-        success.value = response.data.message
+        const updatedImage = response.data.data
+        if (index !== -1) images.value.splice(index, 1, updatedImage)
+        if (updatedImage.status === "validée") {
+            imageSuccess.value = "Image validée avec succès."
+        } else if (updatedImage.status === "refusée") {
+            imageSuccess.value = "Image refusée avec succès."
+        } else {
+            imageSuccess.value = response.data.message
+        }
     } catch (requestError) {
         showRequestError(requestError, "Impossible d'enregistrer l'image.")
+    } finally {
+        saving.value = false
     }
 }
 
@@ -495,6 +493,60 @@ onMounted(() => {
     max-width: 100px;
     max-height: 70px;
     object-fit: contain;
+}
+
+.image-preview-button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: zoom-in;
+}
+
+.image-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2050;
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+    background: rgb(0 0 0 / 75%);
+}
+
+.image-modal {
+    position: relative;
+    display: flex;
+    width: min(100%, 1100px);
+    max-height: 100%;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    background: #fff;
+    box-shadow: 0 1rem 3rem rgb(0 0 0 / 35%);
+}
+
+.image-modal-picture {
+    display: block;
+    width: 100%;
+    max-height: calc(100vh - 8rem);
+    object-fit: contain;
+}
+
+.image-modal-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 1;
+    display: grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: #fff;
+    color: #1c6e8c;
+    font-size: 1.5rem;
 }
 
 .category-preview {

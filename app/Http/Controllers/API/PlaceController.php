@@ -170,15 +170,20 @@ class PlaceController extends BaseController
      */
     public function update(Request $request, Place $lieu)
     {
-        $this->authorizeAdmin($request);
+        $isAdmin = (int) $request->user()->role?->id === 2;
+        $isOwner = (int) $lieu->user_id === (int) $request->user()->id;
+        abort_unless($isAdmin || $isOwner, 403, 'Vous ne pouvez modifier que vos propres lieux.');
 
-        $validated = $request->validate([
+        if (!$isAdmin && $request->hasAny(['note', 'status', 'comment'])) {
+            abort(403, 'Seule l’administration peut modifier la note ou le statut.');
+        }
+
+        $rules = [
             'name' => 'sometimes|required|string|min:10|max:100',
             'description' => 'sometimes|required|string|min:25|max:3000',
             'latitude' => 'sometimes|required|numeric|between:-90,90',
             'longitude' => 'sometimes|required|numeric|between:-180,180',
             'category_id' => 'sometimes|required|integer|exists:categories,id',
-            'note' => 'sometimes|required|numeric|min:1|max:10',
             'time' => 'sometimes|required|integer|min:1|max:24',
             'difficulty' => 'sometimes|required|in:famille,amateur,sportif',
             'kilometres' => 'sometimes|nullable|integer|min:1|max:100',
@@ -186,15 +191,27 @@ class PlaceController extends BaseController
             'adress' => 'sometimes|required|string|min:5|max:75',
             'postcode' => 'sometimes|required|string|size:5',
             'city' => 'sometimes|required|string|min:3|max:50',
-            'status' => 'sometimes|required|in:validé,en attente,à modifier,refusé',
-            'comment' => 'sometimes|required_if:status,à modifier,refusé|nullable|string|min:5|max:1000',
-        ]);
+        ];
+
+        if ($isAdmin) {
+            $rules += [
+                'note' => 'sometimes|required|numeric|min:1|max:10',
+                'status' => 'sometimes|required|in:validé,en attente,à modifier,refusé',
+                'comment' => 'sometimes|required_if:status,à modifier,refusé|nullable|string|min:5|max:1000',
+            ];
+        }
+
+        $validated = $request->validate($rules);
 
         if (empty($validated)) {
             return $this->sendError('Aucune modification fournie.', [], 422);
         }
 
         $previousStatus = $lieu->status;
+        if (!$isAdmin && $previousStatus === 'à modifier') {
+            $validated['status'] = 'en attente';
+            $validated['comment'] = null;
+        }
         $lieu->update($validated);
 
         if (
@@ -203,16 +220,14 @@ class PlaceController extends BaseController
             && $lieu->user_id
             && in_array($validated['status'], ['validé', 'à modifier', 'refusé'], true)
         ) {
-            $statusMessages = [
-                'validé' => 'a été validé',
-                'à modifier' => 'nécessite des modifications',
-                'refusé' => 'a été refusé',
-            ];
+            $message = match ($validated['status']) {
+                'validé' => "Votre lieu « {$lieu->name} » a été validé et est maintenant visible sur Nice Places. Merci pour votre partage.",
+                'à modifier' => "Votre lieu « {$lieu->name} » nécessite des modifications avant validation. Voici le retour de l’administration : {$lieu->comment}",
+                'refusé' => "Votre lieu « {$lieu->name} » n’a pas été retenu. Voici le retour de l’administration : {$lieu->comment}",
+            };
             \App\Models\Notification::create([
-                'title' => "Votre lieu « {$lieu->name} » {$statusMessages[$validated['status']]}",
-                'message' => $validated['status'] === 'à modifier' || $validated['status'] === 'refusé'
-                    ? ($lieu->comment ?: 'Aucun commentaire transmis.')
-                    : "Votre lieu « {$lieu->name} » est maintenant visible sur Nice Places.",
+                'title' => "Votre lieu « {$lieu->name} » : {$validated['status']}",
+                'message' => "Bonjour {$lieu->user->name},<br><br>{$message}<br><br>Cordialement,<br>L’administrateur.",
                 'user_id' => $lieu->user_id,
                 'place_id' => $lieu->id,
             ]);

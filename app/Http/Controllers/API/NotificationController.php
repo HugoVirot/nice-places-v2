@@ -23,12 +23,14 @@ class NotificationController extends BaseController
      *
      * @return \Illuminate\Http\Response
      */
-    public function getNotificationsByUser(User $user)
+    public function getNotificationsByUser(Request $request, User $user)
     {
+        abort_unless((int) $request->user()->id === (int) $user->id, 403, 'Vous ne pouvez consulter que vos notifications.');
+
         // on récupère les notifications de l'utilisateur en paramètre
         // triées dans l'ordre suivant : la plus récente en premier
         $user->load(['notifications' => function ($query) {
-            $query->latest()->get();
+            $query->latest();
         }]);
         return response()->json($user->notifications);
     }
@@ -63,11 +65,13 @@ class NotificationController extends BaseController
      * @param  \App\Models\Notification  $notification
      * @return \Illuminate\Http\Response
      */
-    public function update(Notification $notification)
+    public function update(Request $request, Notification $notification)
     {
+        abort_unless((int) $request->user()->id === (int) $notification->user_id, 403, 'Vous ne pouvez modifier que vos notifications.');
+
         // on marque la notification comme lue
         $notification->read = true;
         $notification->save();
-        $this->sendResponse($notification, "Notification marquée comme lue", 201);
+        return $this->sendResponse($notification, "Notification marquée comme lue");
     }
 }

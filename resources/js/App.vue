@@ -132,7 +132,6 @@ watch(
 	{ immediate: true }
 )
 
-
 onBeforeMount(() => {
 
 	// on récupère les cat / places / dep / régions et on les stocke dans le store
@@ -397,8 +396,6 @@ onBeforeMount(() => {
 
 		</div>
 		</main>
-
-
 
 	<Footer />
 	</div>

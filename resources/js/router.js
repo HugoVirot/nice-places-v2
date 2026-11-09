@@ -61,6 +61,7 @@ const routes = [
   },
   {
     path: "/modifierlieu/:id",
+    name: "edit-place",
     component: () => import('./components/backoffice/EditPlace.vue')
   },
   {

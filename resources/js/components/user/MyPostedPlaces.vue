@@ -36,6 +36,9 @@
                     </span>
                 </p>
                 <PlaceCard :place="place" />
+                <router-link :to="`/modifierlieu/${place.id}`" class="btn greenButton rounded-pill mt-2">
+                    Modifier ce lieu
+                </router-link>
             </div>
         </div>
     </section>

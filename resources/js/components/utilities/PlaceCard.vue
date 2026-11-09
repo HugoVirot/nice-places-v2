@@ -22,27 +22,6 @@
                 </div>
             </div>
 
-            <div v-if="$route.name && $route.name == 'mesplacespostes'" class="row">
-
-                <div class="col-md-6 mb-1">
-                    <div v-if="place.status == 'validé'" class="mx-auto bg-success w-50 rounded">validé</div>
-                    <div v-else-if="place.status == 'en attente'" class="mx-auto bg-info w-50 rounded">en attente de
-                        validation
-                    </div>
-                    <div v-else-if="place.status == 'à modifier'" class="mx-auto bg-warning w-50 rounded">à modifier pour
-                        être
-                        validé
-                    </div>
-                    <div v-else class="mx-auto bg-danger">refusé
-                    </div>
-                </div>
-
-                <div class="col-md-6">
-                    <router-link :to="`modifierLieu/${place.id}`"><button class="btn blueButton">Modifier place</button>
-                    </router-link>
-                </div>
-            </div>
-
         </div>
     </router-link>
 </template>

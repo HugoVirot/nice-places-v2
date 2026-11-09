@@ -1,383 +1,447 @@
 <template>
-    <div class="p-3">
-        <i class="fa-3x greenIcon fa-solid fa-pen-to-square"></i>
-        <h1 class="mt-2">Modifier {{ lieu.nom }}</h1>
-        <h2 v-if="role == 'admin' && lieu">Posté par {{ lieu.user.pseudo }}</h2>
-        <div v-if="lieu">
-            <div v-if="statut == 'validé'" class="mx-auto bg-success text-white w-25">validé</div>
-            <div v-else-if="statut == 'en attente'" class="mx-auto bg-info w-25">en attente de validation
-            </div>
-            <div v-else-if="statut == 'à modifier'" class="mx-auto bg-warning w-25">à modifier pour être validé
-            </div>
-            <div v-else class="mx-auto bg-danger w-25">refusé
-            </div>
-        </div>
-    </div>
+    <main class="container-fluid p-3 p-lg-5">
+        <LoadingSpinner v-if="loading" />
 
-    <div class="container-fluid p-3 p-lg-5" :style="`background-image: url(/images/${
-        lieu.cover_image && lieu.cover_image[0] ? lieu.cover_image[0].nom : 'rocks.jpg'
-        }); background-position: center; background-size: cover;`">
+        <section v-else-if="loadError" class="container p-5 text-center" role="alert">
+            <p class="alert alert-danger">{{ loadError }}</p>
+            <router-link :to="backPath" class="btn btn-outline-secondary rounded-pill">Retour</router-link>
+        </section>
 
-        <ValidationErrors :errors="validationErrors" v-if="validationErrors" />
+        <section v-else-if="!canEdit" class="container p-5 text-center" role="alert">
+            <h1>Modification impossible</h1>
+            <p>Seul l’auteur du lieu ou un administrateur peut le modifier.</p>
+            <router-link to="/meslieuxpostes" class="btn btn-outline-secondary rounded-pill">Retour à mes lieux</router-link>
+        </section>
 
-        <div v-if="lieu !== ''" class="row justify-content-center p-2 p-lg-5">
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header text-white mb-3">Entrez les nouvelles informations</div>
+        <template v-else>
+            <header class="p-3 text-center">
+                <i class="fa-3x greenIcon fa-solid fa-pen-to-square" aria-hidden="true"></i>
+                <h1 class="mt-2">Modifier {{ place.name }}</h1>
+                <p v-if="isAdmin && place.user" class="mb-2">Posté par {{ place.user.name }}</p>
+                <span class="status-badge" :class="statusClass(place.status)">{{ place.status }}</span>
+                <p v-if="!isAdmin && place.comment" class="alert alert-warning mt-3" role="note">
+                    Message de l’administration : {{ place.comment }}
+                </p>
+            </header>
 
-                    <div class="card-body">
+            <ValidationErrors v-if="validationErrors" :errors="validationErrors" />
 
-                        <form @submit.prevent="saveChanges">
-
-                            <div v-if="role == 'admin'" class="form-group row m-2">
-                                <label for="statut" class="col-md-4 col-form-label text-md-right">modifier le
-                                    statut</label>
-
-                                <div class="col-md-6">
-                                    <select required v-model="statut" class="form-select" aria-label="statut">
-                                        <option value="validé">validé</option>
-                                        <option value="en attente">en attente</option>
-                                        <option value="à modifier">à modifier</option>
-                                        <option value="refusé">refusé</option>
+            <div class="row justify-content-center p-2 p-lg-4">
+                <div class="col-md-9 col-lg-8">
+                    <div class="card">
+                        <div class="card-header text-white">Modifiez les informations du lieu</div>
+                        <div class="card-body">
+                            <form @submit.prevent="saveChanges">
+                                <div v-if="isAdmin" class="mb-3">
+                                    <label for="status" class="form-label">Statut</label>
+                                    <select id="status" v-model="form.status" class="form-select" required>
+                                        <option v-for="status in statuses" :key="status" :value="status">{{ status }}</option>
                                     </select>
                                 </div>
-                            </div>
 
-                            <div v-if="statut == 'à modifier' || statut == 'refusé'" class="form-group row m-2">
-                                <label for="commentaire" class="col-md-4 col-form-label text-md-right">changements à
-                                    effectuer ou raison du refus</label>
-
-                                <div class="col-md-6">
-                                    <input v-model="commentaire" id="commentaire" type="text" class="form-control"
-                                        name="commentaire" required autocomplete="commentaire" autofocus>
+                                <div v-if="isAdmin && ['à modifier', 'refusé'].includes(form.status)" class="mb-3">
+                                    <label for="comment" class="form-label">Message à l’auteur / raison du refus</label>
+                                    <textarea id="comment" v-model.trim="form.comment" class="form-control" rows="3"
+                                        maxlength="1000" minlength="5" required></textarea>
                                 </div>
-                            </div>
 
-                            <div class="form-group row m-2">
-                                <label for="nom" class="col-md-4 col-form-label text-md-right">nom</label>
-
-                                <div class="col-md-6">
-                                    <input v-model="nom" id="nom" type="text" class="form-control" name="nom" required
-                                        autocomplete="nom" autofocus>
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Nom du lieu</label>
+                                    <input id="name" v-model.trim="form.name" type="text" class="form-control"
+                                        minlength="10" maxlength="100" required>
                                 </div>
-                            </div>
 
-                            <div class="form-group row m-2">
-                                <label for="description"
-                                    class="col-md-4 col-form-label text-md-right">description</label>
-
-                                <div class="col-md-6">
-                                    <textarea v-model="description" id="description" class="form-control"
-                                        name="description" required autocomplete="description"></textarea>
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">Description</label>
+                                    <textarea id="description" v-model.trim="form.description" class="form-control"
+                                        minlength="25" maxlength="3000" rows="4" required></textarea>
                                 </div>
-                            </div>
 
-                            <div class="form-group row m-2">
-                                <label for="latitude" class="col-md-4 col-form-label text-md-right">latitude</label>
-
-                                <div class="col-md-6">
-                                    <input v-model="latitude" id="latitude" type="text" class="form-control"
-                                        name="latitude" required autocomplete="latitude">
-                                </div>
-                            </div>
-                            <div class="form-text">entre -90 et 90. Partie décimale : maximum 7 chiffres.</div>
-
-                            <div class="form-group row m-2">
-                                <label for="longitude" class="col-md-4 col-form-label text-md-right">longitude</label>
-
-                                <div class="col-md-6">
-                                    <input v-model="longitude" id="longitude" type="text" class="form-control"
-                                        name="longitude" required autocomplete="longitude">
-                                </div>
-                            </div>
-                            <div class="form-text mb-2">entre -180 et 180. Partie décimale : maximum 7 chiffres.</div>
-
-                            <!-- <p>Catégorie actuelle : {{ categorie.nom }}</p> -->
-
-                            <div class="form-group row m-2">
-                                <label for="categorie_id"
-                                    class="col-md-4 col-form-label text-md-right">catégorie</label>
-
-                                <div class="col-md-6">
-                                    <select v-model="categorie_id" class="form-select" aria-label="categorie_id">
+                                <div class="mb-3">
+                                    <label for="category" class="form-label">Catégorie</label>
+                                    <select id="category" v-model="form.category_id" class="form-select" required>
+                                        <option disabled value="">Choisir une catégorie</option>
                                         <option v-for="category in categories" :key="category.id" :value="category.id">
-                                            {{ category.nom }}
+                                            {{ category.name }}
                                         </option>
                                     </select>
                                 </div>
-                            </div>
 
-                            <!-- seul l'Admin peut changer la note du lieu -->
-                            <div v-if="role == 'admin'" class="form-group row m-2">
-                                <label for="note" class="col-md-4 col-form-label text-md-right">note sur
-                                    10</label>
-
-                                <div class="col-md-6">
-                                    <input v-model="note" id="note" min="0" max="10" type="number" step="0.1"
-                                        class="form-control" name="note" required autocomplete="note">
+                                <div class="mb-3 position-relative">
+                                    <label for="locationQuery" class="form-label">Rechercher une adresse ou un lieu</label>
+                                    <input id="locationQuery" v-model="locationQuery" type="search" class="form-control"
+                                        placeholder="Saisissez quelques lettres puis choisissez un résultat"
+                                        autocomplete="off" role="combobox" aria-autocomplete="list"
+                                        aria-controls="location-results"
+                                        :aria-expanded="locationResults.length > 0">
+                                    <div class="form-text">
+                                        Sélectionnez un résultat pour mettre à jour automatiquement l’adresse, la ville,
+                                        le département et les coordonnées. Vous pouvez aussi modifier ces champs manuellement.
+                                    </div>
+                                    <div v-if="searchingLocations" class="form-text" role="status">Recherche en cours…</div>
+                                    <div v-if="locationResults.length" id="location-results"
+                                        class="list-group location-results" role="listbox">
+                                        <button v-for="(result, index) in locationResults"
+                                            :key="result.properties?.id || index" type="button"
+                                            class="list-group-item list-group-item-action" role="option"
+                                            @click="selectLocation(result)">
+                                            {{ locationLabel(result) }}
+                                        </button>
+                                    </div>
+                                    <p v-if="locationSearchError" class="text-danger small mt-2 mb-0" role="status">
+                                        {{ locationSearchError }}
+                                    </p>
+                                    <p class="form-text">Recherche fournie par le service de géocodage de la Géoplateforme (IGN).</p>
                                 </div>
-                            </div>
 
-                            <div class="form-group row m-2">
-                                <label for="temps" class="col-md-4 col-form-label text-md-right">temps moyen en
-                                    heures</label>
-
-                                <div class="col-md-6">
-                                    <input min="1" max="24" v-model="temps" id="temps" type="number"
-                                        class="form-control" name="temps" required autocomplete="temps">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="latitude" class="form-label">Latitude</label>
+                                        <input id="latitude" v-model="form.latitude" type="number" step="any"
+                                            min="-90" max="90" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="longitude" class="form-label">Longitude</label>
+                                        <input id="longitude" v-model="form.longitude" type="number" step="any"
+                                            min="-180" max="180" class="form-control" required>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="form-group row m-2">
-                                <label for="temps" class="col-md-4 col-form-label text-md-right">niveau de
-                                    difficulté</label>
+                                <div v-if="isAdmin" class="mb-3">
+                                    <label for="note" class="form-label">Note sur 10</label>
+                                    <input id="note" v-model="form.note" type="number" min="1" max="10" step="0.1"
+                                        class="form-control" required>
+                                </div>
 
-                                <div class="col-md-6">
-                                    <select required v-model="difficulte" class="form-select" aria-label="difficulte">
-                                        <option :selected="difficulte == 'famille' ? 'selected' : ''" value="famille">
-                                            famille</option>
-                                        <option :selected="difficulte == 'amateur' ? 'selected' : ''" value="amateur">
-                                            amateur</option>
-                                        <option :selected="difficulte == 'sportif' ? 'selected' : ''" value="sportif">
-                                            sportif</option>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="time" class="form-label">Durée moyenne (heures)</label>
+                                        <input id="time" v-model="form.time" type="number" min="1" max="24"
+                                            class="form-control" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="difficulty" class="form-label">Niveau de difficulté</label>
+                                        <select id="difficulty" v-model="form.difficulty" class="form-select" required>
+                                            <option value="famille">Famille</option>
+                                            <option value="amateur">Amateur</option>
+                                            <option value="sportif">Sportif</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="kilometres" class="form-label">Distance moyenne (km, facultatif)</label>
+                                    <input id="kilometres" v-model="form.kilometres" type="number" min="1" max="100"
+                                        class="form-control">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="department" class="form-label">Département</label>
+                                    <select id="department" v-model="form.department_id" class="form-select" required>
+                                        <option disabled value="">Choisir un département</option>
+                                        <option v-for="department in departments" :key="department.id"
+                                            :value="department.id">
+                                            {{ department.code }} - {{ department.name }}
+                                        </option>
                                     </select>
                                 </div>
-                            </div>
 
-                            <div class="form-group row m-2">
-                                <label for="temps" class="col-md-4 col-form-label text-md-right">distance moyenne en
-                                    km (facultatif)</label>
-
-                                <div class="col-md-6">
-                                    <input min="1" max="150" v-model="kilometres" id="kilometres" type="number"
-                                        class="form-control" name="kilometres" autocomplete="kilometres">
+                                <div class="mb-3">
+                                    <label for="adress" class="form-label">Adresse</label>
+                                    <input id="adress" v-model.trim="form.adress" type="text" class="form-control"
+                                        minlength="5" maxlength="75" required>
                                 </div>
-                            </div>
 
-                            <div class="form-group row m-2">
-                                <label class="col-md-4 col-form-label text-md-right"
-                                    for="department_id">département</label>
-                                <select id="department_id" required v-model="department_id" class="form-select w-50"
-                                    aria-label="filtre" autocomplete="department_id">
-                                    <option v-for="department in departments" :value="department.id">
-                                        {{ department.code }} - {{ department.nom }}</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group row m-2">
-                                <label for="adresse" class="col-md-4 col-form-label text-md-right">adresse</label>
-
-                                <div class="col-md-6">
-                                    <input v-model="adresse" id="adresse" type="text" class="form-control"
-                                        name="adresse" required autocomplete="adresse">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="postcode" class="form-label">Code postal</label>
+                                        <input id="postcode" v-model.trim="form.postcode" type="text"
+                                            pattern="[0-9A-Za-z]{5}" maxlength="5" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-8 mb-3">
+                                        <label for="city" class="form-label">Ville</label>
+                                        <input id="city" v-model.trim="form.city" type="text" minlength="3"
+                                            maxlength="50" class="form-control" required>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="form-group row m-2">
-                                <label for="code_postal" class="col-md-4 col-form-label text-md-right">code
-                                    postal</label>
-
-                                <div class="col-md-6">
-                                    <input v-model="code_postal" id="code_postal" type="text" class="form-control"
-                                        name="code_postal" required autocomplete="code_postal">
-                                </div>
-                            </div>
-
-                            <div class="form-group row m-2">
-                                <label for="ville" class="col-md-4 col-form-label text-md-right">ville</label>
-
-                                <div class="col-md-6">
-                                    <input v-model="ville" id="ville" type="text" class="form-control" name="ville"
-                                        required autocomplete="ville">
-                                </div>
-                            </div>
-
-                            <div class="form-group row mt-3 text-center">
-                                <div class="col-md-6 offset-md-3">
-                                    <button type="submit"
-                                        class="btn btn-lg greenButton rounded-pill text-light btn-info">
-                                        Valider
+                                <div class="d-flex flex-wrap gap-2 justify-content-center mt-4">
+                                    <button type="submit" class="btn btn-lg greenButton rounded-pill"
+                                        :disabled="saving">
+                                        {{ saving ? "Enregistrement..." : "Enregistrer les modifications" }}
                                     </button>
+                                    <router-link :to="backPath" class="btn btn-lg btn-outline-secondary rounded-pill">
+                                        Annuler
+                                    </router-link>
                                 </div>
-                            </div>
-
-                        </form>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+        </template>
+    </main>
 </template>
 
-<script>
-import axios from 'axios'
+<script setup>
+import axios from "axios"
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from "vue"
+import { useRoute, useRouter } from "vue-router"
+import { useUserStore } from "../../stores/userStore"
+import { usePlacesStore } from "../../stores/placesStore"
+import LoadingSpinner from "../utilities/LoadingSpinner.vue"
 import ValidationErrors from "../utilities/ValidationErrors.vue"
-import { useUserStore } from "../../stores/userStore.js";
-import { usePlacesStore } from '../../stores/placesStore';
-import { mapState, mapWritableState } from 'pinia';
-import { mapActions } from 'pinia';
 
-export default {
+const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
+const placesStore = usePlacesStore()
 
-    computed: {
-        ...mapState(useUserStore, ['role']),
-        ...mapState(usePlacesStore, ['categories', 'departments']),
-        ...mapWritableState(usePlacesStore, ['lieux'])
-    },
+const place = ref(null)
+const loading = ref(true)
+const saving = ref(false)
+const loadError = ref("")
+const validationErrors = ref(null)
+const categories = ref([])
+const departments = ref([])
+const statuses = ["en attente", "validé", "à modifier", "refusé"]
+const locationQuery = ref("")
+const locationResults = ref([])
+const searchingLocations = ref(false)
+const locationSearchError = ref("")
+const form = reactive({
+    name: "",
+    description: "",
+    latitude: "",
+    longitude: "",
+    category_id: "",
+    note: "",
+    time: "",
+    difficulty: "",
+    kilometres: "",
+    department_id: "",
+    adress: "",
+    postcode: "",
+    city: "",
+    status: "",
+    comment: ""
+})
+let searchTimer
+let searchController
+let skipNextLocationSearch = false
 
-    data() {
-        return {
-            lieuId: this.$route.params.id,
-            lieu: "",
-            nom: "",
-            description: "",
-            latitude: "",
-            longitude: "",
-            categorie_id: "",
-            note: "",
-            temps: "",
-            difficulte: "",
-            kilometres: "",
-            department_id: "",
-            adresse: "",
-            code_postal: "",
-            ville: "",
-            statut: "",
-            statutPrecedent: "",
-            commentaire: "",
-            validationErrors: ""
-        }
-    },
+const isAdmin = computed(() => Number(userStore.roleId) === 2 || userStore.role === "admin")
+const canEdit = computed(() => Boolean(place.value && userStore.userLoggedIn && (
+    isAdmin.value || Number(place.value.user_id) === Number(userStore.id)
+)))
+const backPath = computed(() => isAdmin.value ? "/backoffice" : "/meslieuxpostes")
 
-    components: { ValidationErrors },
+watch(locationQuery, query => {
+    if (skipNextLocationSearch) {
+        skipNextLocationSearch = false
+        return
+    }
 
-    methods: {
-        ...mapActions(usePlacesStore, ['storeLieux']),
+    locationResults.value = []
+    locationSearchError.value = ""
+    searchingLocations.value = false
+    clearTimeout(searchTimer)
+    searchController?.abort()
 
-        // cette fonction permet de mettre à jour les données locales du composant
-        // une fois que l'appel API a récupéré le lieu
-        updateLocalData(lieu) {
-            this.lieu = lieu
-            this.nom = lieu.nom
-            this.description = lieu.description
-            this.latitude = lieu.latitude
-            this.longitude = lieu.longitude
-            this.note = lieu.note
-            this.categorie_id = lieu.categorie.id
-            this.temps = lieu.temps
-            this.difficulte = lieu.difficulte
-            this.kilometres = lieu.kilometres
-            this.department_id = lieu.department_id
-            this.adresse = lieu.adresse
-            this.code_postal = lieu.code_postal
-            this.ville = lieu.ville
-            this.statut = lieu.statut
-            this.statutPrecedent = lieu.statut
-            this.commentaire = lieu.commentaire
-        },
+    const searchTerm = query.trim()
+    if (searchTerm.length < 3) return
 
-        saveChanges() {
-            // on sauvegarde les changements dans la base de données
-            axios.put('/api/places/' + this.lieu.id, {
-                nom: this.nom,
-                description: this.description,
-                latitude: this.latitude,
-                longitude: this.longitude,
-                categorie_id: this.categorie_id,
-                note: this.note,
-                temps: this.temps,
-                difficulte: this.difficulte,
-                kilometres: this.kilometres,
-                department_id: this.department_id,
-                adresse: this.adresse,
-                code_postal: this.code_postal,
-                ville: this.ville,
-                // si le statut était "à modifier", on le fait passer automatiquement à "en attente"
-                // sinon, on renvoie le statut actuel
-                statut: this.statut == "à modifier" ? "en attente" : this.statut,
-                commentaire: this.commentaire
+    searchTimer = setTimeout(async () => {
+        const controller = new AbortController()
+        searchController = controller
+        searchingLocations.value = true
+        try {
+            const response = await axios.get("/api/places/geocode", {
+                params: { q: searchTerm },
+                signal: controller.signal
             })
-                .then(response => this.handleSuccess(response))
-                // en cas d'erreur sur la modification de lieu, on affiche les erreurs
-                .catch((error) => {
-                    this.validationErrors = error.response.data.errors;
-                })
-        },
-
-        handleSuccess(response) {
-            let message = response.data.message
-
-            // on actualise le lieu modifié dans la liste des lieux contenue dans le backOfficeStore
-            // cela évite de faire un appel api
-            // on repère d'abord l'index du lieu modifié
-            let index = this.lieux.findIndex(lieu => lieu.id == this.lieu.id)
-            // puis on le remplace par sa nouvelle version
-            this.lieux[index] = response.data.data
-
-            // on sauvegarde dans le store
-            this.storeLieux(this.lieux)
-
-            // on envoie une notification en cas de changement de statut
-            if (this.statutPrecedent !== this.statut && this.statut !== "en attente") {
-                this.sendNotification()
+            if (!controller.signal.aborted) {
+                locationResults.value = response.data.data ?? []
+                if (!locationResults.value.length) {
+                    locationSearchError.value = "Aucun résultat. Essayez un nom de lieu ou une adresse plus précise."
+                }
             }
-
-            //on redirige sur le message de succès
-            this.$router.push('/successmessage/lastpage/' + message)
-
-        },
-
-        sendNotification() {
-            let titre = ""
-            let message = ""
-
-            switch (this.statut) {
-
-                case ("validé"):
-                    titre = `Félicitations ${this.lieu.user.pseudo}, votre lieu ${this.nom} a été validé !`;
-                    message = `Après vérification, j'ai décidé de valider votre lieu : ${this.nom}.<br> 
-                                <i style="color:#94D1BE" class="mx-auto fa-solid fa-circle-check fa-5x p-2"></i><br>
-                                Vous pouvez déjà le retrouver sur la carte ou sur votre onglet "mes lieux postés".<br>
-                                Merci pour ce partage, Nice Places est maintenant plus complet grâce à vous !<br>
-                                A très bientôt.<br>
-                                <span class="text-right">L'administrateur.</span>`
-                    break
-                case ("à modifier"):
-                    titre = `${this.lieu.user.pseudo}, votre lieu ${this.nom} a besoin de modifications pour être validé.`;
-                    message = `Après vérification, votre lieu ${this.nom} a besoin des modifications suivantes : <br> 
-                                ${this.commentaire}<br>
-                                <i style="color:#94D1BE" class="mx-auto fa-solid fa-pen-to-square fa-5x p-2"></i><br>
-                                Merci de faire le nécessaire pour qu'il soit validé.<br>
-                                A très bientôt.<br>
-                                <span class="text-right">L'administrateur.</span>`
-                    break
-                case ("refusé"):
-                    titre = `${this.lieu.user.pseudo}, votre lieu ${this.nom} a été refusé.`;
-                    message = `Après vérification, j'ai décidé de refuser votre lieu : ${this.nom}, pour la ou les raison(s) suivante(s) : <br> 
-                                ${this.commentaire}<br>
-                                <i class="mx-auto fa-solid fa-xmark fa-5x p-2 text-danger"></i><br>
-                                Merci de votre compréhension.<br>
-                                A très bientôt.<br>
-                                <span class="text-right">L'administrateur.</span>`
-                    break
+        } catch (requestError) {
+            if (!controller.signal.aborted) {
+                locationSearchError.value = requestError.response?.data?.message
+                    || "La recherche de lieu est indisponible. Réessayez dans quelques instants."
             }
-
-            axios.post('/api/notifications', { titre: titre, message: message, user_id: this.lieu.user.id, lieu_id: this.lieu.id },)
-                .then(response => console.log(response.data.message))
-                .catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                    alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-                })
+        } finally {
+            if (!controller.signal.aborted) searchingLocations.value = false
         }
-    },
+    }, 350)
+})
 
-    created() {
-
-        axios.get("/api/places/" + this.lieuId)
-            .then(response => {
-                this.updateLocalData(response.data.data)
-            }).catch(() => { // message d'erreur pour l'utilisateur en cas d'échec de l'appel API
-                alert("Une erreur s'est produite. Certains éléments peuvent ne pas être affichés. Vous pouvez essayer de recharger la page pour corriger le problème.")
-            })
-    },
+const statusClass = status => {
+    if (status === "validé") return "status-approved"
+    if (status === "en attente") return "status-pending"
+    if (status === "à modifier") return "status-changes"
+    if (status === "refusé") return "status-rejected"
+    return "status-neutral"
 }
+
+const firstValue = value => Array.isArray(value) ? value[0] : value
+
+const locationLabel = feature => {
+    const properties = feature.properties ?? {}
+    const title = firstValue(properties.name) || properties.toponym || properties.label
+    const town = firstValue(properties.city)
+    return properties.label || [title, town].filter(Boolean).join(", ")
+}
+
+const selectLocation = feature => {
+    const properties = feature.properties ?? {}
+    const point = feature.geometry?.coordinates
+    const postalCode = firstValue(properties.postcode)
+    const departmentCode = firstValue(properties.depcode) || postalCode?.slice(0, 2)
+    const matchedDepartment = departments.value.find(item => String(item.code) === String(departmentCode))
+    const town = firstValue(properties.city)
+
+    if (!Array.isArray(point) || point.length < 2 || !postalCode || !town || !matchedDepartment) {
+        locationSearchError.value = "Ce résultat ne contient pas assez d’informations. Choisissez une adresse plus précise."
+        return
+    }
+
+    const label = locationLabel(feature)
+    form.latitude = Number(point[1]).toFixed(7)
+    form.longitude = Number(point[0]).toFixed(7)
+    form.department_id = matchedDepartment.id
+    form.adress = (properties.street || firstValue(properties.name) || properties.toponym || properties.label || label).slice(0, 75)
+    form.postcode = postalCode
+    form.city = town
+    locationQuery.value = label
+    locationResults.value = []
+    locationSearchError.value = ""
+}
+
+const loadPlace = async id => {
+    loading.value = true
+    loadError.value = ""
+    validationErrors.value = null
+    place.value = null
+    locationResults.value = []
+    locationSearchError.value = ""
+
+    try {
+        const [placeResponse, categoryResponse, departmentResponse] = await Promise.all([
+            axios.get(`/api/places/${id}`),
+            placesStore.categories?.length ? Promise.resolve(null) : axios.get("/api/categories"),
+            placesStore.departments?.length ? Promise.resolve(null) : axios.get("/api/departments")
+        ])
+        place.value = placeResponse.data.data
+        categories.value = categoryResponse?.data.data ?? placesStore.categories ?? []
+        departments.value = departmentResponse?.data.data ?? placesStore.departments ?? []
+        if (categoryResponse) placesStore.storeCategories(categories.value)
+        if (departmentResponse) placesStore.storeDepartments(departments.value)
+        Object.assign(form, {
+            name: place.value.name ?? "",
+            description: place.value.description ?? "",
+            latitude: place.value.latitude ?? "",
+            longitude: place.value.longitude ?? "",
+            category_id: place.value.category_id ?? place.value.category?.id ?? "",
+            note: place.value.note ?? "",
+            time: place.value.time ?? "",
+            difficulty: place.value.difficulty ?? "famille",
+            kilometres: place.value.kilometres ?? "",
+            department_id: place.value.department_id ?? place.value.department?.id ?? "",
+            adress: place.value.adress ?? "",
+            postcode: place.value.postcode ?? "",
+            city: place.value.city ?? "",
+            status: place.value.status ?? "en attente",
+            comment: place.value.comment ?? ""
+        })
+        skipNextLocationSearch = true
+        locationQuery.value = [form.adress, form.postcode, form.city].filter(Boolean).join(", ")
+        await nextTick()
+        skipNextLocationSearch = false
+    } catch (requestError) {
+        loadError.value = requestError.response?.data?.message
+            || "Impossible de charger ce lieu. Vérifiez votre connexion puis réessayez."
+    } finally {
+        loading.value = false
+    }
+}
+
+onBeforeUnmount(() => {
+    clearTimeout(searchTimer)
+    searchController?.abort()
+})
+
+const saveChanges = async () => {
+    if (!canEdit.value) return
+
+    saving.value = true
+    validationErrors.value = null
+    const data = {
+        name: form.name,
+        description: form.description,
+        latitude: form.latitude,
+        longitude: form.longitude,
+        category_id: form.category_id,
+        time: form.time,
+        difficulty: form.difficulty,
+        kilometres: form.kilometres || null,
+        department_id: form.department_id,
+        adress: form.adress,
+        postcode: form.postcode,
+        city: form.city
+    }
+    if (isAdmin.value) {
+        data.note = form.note
+        data.status = form.status
+        data.comment = form.comment || null
+    }
+
+    try {
+        const response = await axios.put(`/api/places/${place.value.id}`, data)
+        const updatedPlace = response.data.data
+        if (Array.isArray(placesStore.places)) {
+            const index = placesStore.places.findIndex(item => item.id === updatedPlace.id)
+            if (index !== -1) placesStore.places.splice(index, 1, updatedPlace)
+        }
+        if (Array.isArray(userStore.userPlaces)) {
+            const index = userStore.userPlaces.findIndex(item => item.id === updatedPlace.id)
+            if (index !== -1) userStore.userPlaces.splice(index, 1, updatedPlace)
+        }
+        const destination = isAdmin.value ? "backoffice" : "meslieuxpostes"
+        await router.push(`/successmessage/${destination}/${encodeURIComponent(response.data.message)}`)
+    } catch (requestError) {
+        validationErrors.value = requestError.response?.data?.errors || {
+            general: [requestError.response?.data?.message || "Impossible d'enregistrer le lieu. Réessayez."]
+        }
+    } finally {
+        saving.value = false
+    }
+}
+
+watch(() => route.params.id, id => loadPlace(id), { immediate: true })
 </script>
+
+<style scoped>
+.location-results {
+    position: absolute;
+    z-index: 10;
+    width: 100%;
+    max-height: 16rem;
+    overflow-y: auto;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.status-pending { color: #7a5700; background-color: #fff0bf; }
+.status-changes { color: #80500a; background-color: #ffe2b8; }
+.status-rejected { color: #8e2632; background-color: #f8d7da; }
+.status-approved { color: #17613f; background-color: #d6f1e4; }
+.status-neutral { color: #435b64; background-color: #e6ecee; }
+</style>

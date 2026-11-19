@@ -2,17 +2,21 @@
     <div class="place-filters">
         <p class="text-secondary mt-3">Afficher les lieux :</p>
 
-        <select v-model="filter" class="form-select w-50 mx-auto" aria-label="Filtrer les lieux">
+        <select v-model="filter" class="form-select filter-control mx-auto" aria-label="Filtrer les lieux">
             <option value="france">de la France entière</option>
             <option v-if="userStore.department" value="userDepartment">de votre département</option>
             <option v-if="userStore.department" value="userRegion">de votre région</option>
-            <option value="otherDepartment">d'un autre département</option>
-            <option value="otherRegion">d'une autre région</option>
+            <option value="otherDepartment">
+                {{ userStore.userLoggedIn ? "d'un autre département" : "d'un département précis" }}
+            </option>
+            <option value="otherRegion">
+                {{ userStore.userLoggedIn ? "d'une autre région" : "d'une région précise" }}
+            </option>
         </select>
 
         <div v-if="filter === 'otherDepartment'">
             <label class="m-3 text-secondary" for="departmentSelect">Choisissez un département</label>
-            <select id="departmentSelect" v-model="departmentFilter" class="form-select w-50 mx-auto"
+            <select id="departmentSelect" v-model="departmentFilter" class="form-select filter-control mx-auto"
                 aria-label="Département">
                 <option v-for="department in placesStore.departments || []" :key="department.id"
                     :value="department.id">
@@ -23,7 +27,7 @@
 
         <div v-if="filter === 'otherRegion'">
             <label class="m-3 text-secondary" for="regionSelect">Choisissez une région</label>
-            <select id="regionSelect" v-model="regionFilter" class="form-select w-50 mx-auto"
+            <select id="regionSelect" v-model="regionFilter" class="form-select filter-control mx-auto"
                 aria-label="Région">
                 <option v-for="region in placesStore.regions || []" :key="region.id" :value="region.id">
                     {{ region.name }}
@@ -77,3 +81,21 @@ const applyFilter = () => {
 
 watch([filter, departmentFilter, regionFilter], applyFilter)
 </script>
+
+<style scoped>
+.filter-control {
+    width: 75%;
+}
+
+@media (min-width: 768px) {
+    .filter-control {
+        width: 50%;
+    }
+}
+
+@media (min-width: 1204px) {
+    .filter-control {
+        width: 25%;
+    }
+}
+</style>

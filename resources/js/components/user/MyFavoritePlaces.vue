@@ -9,7 +9,7 @@
     <section v-else-if="!userStore.userLoggedIn" class="p-5">
         <p>Connectez-vous pour consulter vos lieux favoris.</p>
         <router-link to="/connexion">
-            <button class="btn btn-lg greenButton rounded-pill">Se connecter</button>
+            <button class="btn btn-lg greenButton rounded">Se connecter</button>
         </router-link>
     </section>
 

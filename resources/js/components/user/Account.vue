@@ -49,8 +49,8 @@
                             </div>
 
                             <div class="form-group row mt-3 text-center">
-                                <div class="col-md-6 offset-md-3">
-                                    <button id="boutonValider" type="submit" class="btn btn-lg rounded-pill text-light">
+                                <div class="col-md-6 offset-md-4">
+                                    <button id="boutonValider" type="submit" class="btn btn-lg rounded text-light w-100">
                                         Valider
                                     </button>
                                 </div>
@@ -139,7 +139,7 @@
                             </div>
                         </div>
 
-                        <div v-if="passwordCorrect" class="form-group row mx-auto rounded-pill mt-2 mb-4 bg-white w-50">
+                        <div v-if="passwordCorrect" class="form-group row mx-auto rounded mt-2 mb-4 bg-white w-50">
                             <i class="fa-solid fa-circle-check greenIcon fa-3x p-2 mb-2"></i>
                             <p class="titleIcon">Mot de passe sécurisé</p>
                         </div>
@@ -156,14 +156,14 @@
                         </div>
 
                         <div v-if="passwordCorrect && password != '' && password == password_confirmation"
-                            class="form-group row mx-auto m-2 mt-3 rounded-pill bg-white w-50">
+                            class="form-group row mx-auto m-2 mt-3 rounded bg-white w-50">
                             <i class="fa-solid fa-circle-check greenIcon fa-3x p-2"></i>
                             <p class="titleIcon">Confirmation OK</p>
                         </div>
 
                         <div class="form-group row m-3 text-center">
-                            <div class="col-md-6 offset-md-3">
-                                <button id="boutonValider" type="submit" class="btn btn-lg rounded-pill text-light">
+                            <div class="col-md-6 offset-md-4">
+                                <button id="boutonValider" type="submit" class="btn btn-lg rounded text-light w-100">
                                     Valider
                                 </button>
                             </div>
@@ -186,8 +186,8 @@
                             <p class="text-white">Les lieux et les avis que vous avez postés seront conservés (ils
                                 seront anonymisés).</p>
                             <div class="form-group row m-3 text-center">
-                                <div class="col-md-6 offset-md-3">
-                                    <button type="submit" class="btn rounded-pill text-light btn-danger">
+                                <div class="col-md-6 offset-md-4">
+                                    <button type="submit" class="btn rounded text-light btn-danger w-100">
                                         Supprimer mon compte
                                     </button>
                                 </div>

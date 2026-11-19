@@ -24,17 +24,11 @@ class LoginController extends BaseController
 
         // Laravel tente de connecter le user si l'email existe ET si le mdp en clair correspond à celui hashé 
         if (Auth::attempt($credentials)) {
-
-            // forcer la régénération du token csrf : à checker car déclenche l'erreur CSRF token mismatch
-            // ou l'erreur "Session store not set on request" si pas de header Origin : 127.0.0.1:8000
-            //https://laracasts.com/discuss/channels/laravel/is-it-really-necessary-to-call-session-regenerate-after-login
-            // if ($request->session()) {
-            //     $request->session()->regenerate();
-            // }
+            $request->session()->regenerate();
 
             // si la connexion fonctionne, on récupère le user connecté et on charge son département
             $authUser = User::find(Auth::user()->id);
-            $authUser->load('department');
+            $authUser->load(['department.region', 'role']);
 
             // on renvoie la réponse 
             return $this->sendResponse($authUser, 'Vous êtes connecté');
@@ -56,9 +50,11 @@ class LoginController extends BaseController
      */
     public function logout(Request $request)
     {
-        //dd($request);
-        // déconnecte de la session en cours et invalide le token du cookie de session
         Auth::guard('web')->logout();
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return $this->sendResponse(null, 'Déconnexion réussie');
     }

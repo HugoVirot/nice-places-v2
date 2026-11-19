@@ -222,8 +222,8 @@ class PlaceController extends BaseController
         ) {
             $message = match ($validated['status']) {
                 'validé' => "Votre lieu « {$lieu->name} » a été validé et est maintenant visible sur Nice Places. Merci pour votre partage.",
-                'à modifier' => "Votre lieu « {$lieu->name} » nécessite des modifications avant validation. Voici le retour de l’administration : {$lieu->comment}",
-                'refusé' => "Votre lieu « {$lieu->name} » n’a pas été retenu. Voici le retour de l’administration : {$lieu->comment}",
+                'à modifier' => "Votre lieu « {$lieu->name} » nécessite des modifications avant validation, pour la raison suivante : {$lieu->comment}",
+                'refusé' => "Votre lieu « {$lieu->name} » n’a pas été retenu, pour la raison suivante : {$lieu->comment}",
             };
             \App\Models\Notification::create([
                 'title' => "Votre lieu « {$lieu->name} » : {$validated['status']}",

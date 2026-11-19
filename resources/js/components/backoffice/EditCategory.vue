@@ -59,8 +59,8 @@
                             </div>
 
                             <div class="form-group row mt-3 text-center">
-                                <div class="col-md-6 offset-md-3">
-                                    <button type="submit" class="btn btn-lg greenButton rounded-pill text-light">
+                                <div class="col-md-7 offset-md-4">
+                                    <button type="submit" class="btn btn-lg greenButton rounded text-light w-100">
                                         Valider
                                     </button>
                                 </div>

@@ -67,9 +67,9 @@
                             </div>
 
                             <div class="form-group row mt-3 text-center">
-                                <div class="col-md-6 offset-md-3">
+                                <div class="col-md-6 offset-md-4">
                                     <button type="submit"
-                                        class="btn btn-lg greenButton rounded-pill text-light btn-info">
+                                        class="btn btn-lg greenButton rounded text-light btn-info w-100">
                                         Valider
                                     </button>
                                 </div>

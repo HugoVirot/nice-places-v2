@@ -1,0 +1,1 @@
+import{n as e}from"./pinia-DHBy5QC2.js";var t=e({id:`BackOfficeStore`,state:()=>({reviews:``,users:``,images:``}),getters:{},actions:{storeReviews(e){this.reviews=e},storeUsers(e){this.users=e},storeImages(e){this.images=e}},persist:!0});export{t};

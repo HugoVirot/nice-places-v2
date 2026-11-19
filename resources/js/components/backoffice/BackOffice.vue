@@ -52,9 +52,9 @@
                                             <div class="col-md-4"><label class="form-label">Nom</label><input v-model="editingCategory.name" class="form-control" required minlength="5" maxlength="50"></div>
                                             <div class="col-md-4"><label class="form-label">Icône Font Awesome</label><input v-model="editingCategory.icon" class="form-control" required maxlength="50"></div>
                                             <div class="col-md-2"><label class="form-label">Couleur</label><input v-model="editingCategory.color" class="form-control" required maxlength="15"></div>
-                                            <div class="col-md-2"><button class="btn greenButton me-2" :disabled="saving">Enregistrer</button><button type="button" class="btn btn-outline-secondary" @click="editingCategory = null">Annuler</button></div>
+                                            <div class="col-md-4 d-grid gap-2"><button class="btn greenButton w-100" :disabled="saving">Enregistrer</button><button type="button" class="btn btn-outline-secondary w-100" @click="editingCategory = null">Annuler</button></div>
                                             <div class="col-md-5"><label class="form-label">Image (JPG, 5 Mo max.)</label><input :ref="element => categoryImageInputs[category.id] = element" type="file" accept=".jpg,.jpeg,image/jpeg" class="form-control"></div>
-                                            <div class="col-md-2"><button type="button" class="btn blueButton" :disabled="saving" @click="uploadSelectedCategoryImage(category)">Changer l’image</button></div>
+                                            <div class="col-md-5"><button type="button" class="btn blueButton w-100" :disabled="saving" @click="uploadSelectedCategoryImage(category)">Changer l’image</button></div>
                                             <div class="col-md-5"><img :src="editingCategory.image_url" :alt="`Image de ${editingCategory.name}`" class="category-preview"></div>
                                         </form>
                                     </td>
@@ -70,7 +70,7 @@
                     <div class="col-md-4"><label class="form-label" for="categoryName">Nom</label><input id="categoryName" v-model="newCategory.name" class="form-control" required minlength="5" maxlength="50"></div>
                     <div class="col-md-4"><label class="form-label" for="categoryIcon">Icône Font Awesome</label><input id="categoryIcon" v-model="newCategory.icon" class="form-control" required maxlength="50"></div>
                     <div class="col-md-3"><label class="form-label" for="categoryColor">Couleur</label><input id="categoryColor" v-model="newCategory.color" class="form-control" required maxlength="15"></div>
-                    <div class="col-md-2"><button class="btn greenButton" type="submit" :disabled="saving">Ajouter</button></div>
+                    <div class="col-md-4"><button class="btn greenButton w-100" type="submit" :disabled="saving">Ajouter</button></div>
                     <div class="col-md-4"><label class="form-label" for="newCategoryImage">Image JPG (facultative)</label><input id="newCategoryImage" type="file" accept=".jpg,.jpeg,image/jpeg" class="form-control" @change="newCategoryImage = $event.target.files?.[0] ?? null"></div>
                 </form>
             </section>
@@ -119,7 +119,7 @@
                                             <div class="col-md-2"><label class="form-label">Note</label><input v-model.number="editingReview.note" type="number" min="1" max="10" class="form-control" required></div>
                                             <div class="col-md-3"><label class="form-label">Statut</label><select v-model="editingReview.status" class="form-select"><option v-for="status in reviewStatuses" :key="status" :value="status">{{ status }}</option></select></div>
                                             <div class="col-md-5"><label class="form-label">Commentaire</label><input v-model="editingReview.comment" class="form-control" maxlength="2000"></div>
-                                            <div class="col-md-2"><button class="btn greenButton me-1" :disabled="saving">Enregistrer</button><button type="button" class="btn btn-outline-secondary" @click="editingReview = null">Annuler</button></div>
+                                            <div class="col-md-5 d-grid gap-2"><button class="btn greenButton w-100" :disabled="saving">Enregistrer</button><button type="button" class="btn btn-outline-secondary w-100" @click="editingReview = null">Annuler</button></div>
                                         </form>
                                     </td>
                                 </tr>
@@ -185,7 +185,7 @@
                     <i class="fa-solid fa-xmark" aria-hidden="true"></i>
                 </button>
                 <img :src="`/images/${previewedImage.name}`" :alt="previewedImage.name" class="image-modal-picture">
-                <button type="button" class="btn btn-light rounded-pill" @click="closeImagePreview">Fermer</button>
+                <button type="button" class="btn btn-light rounded" @click="closeImagePreview">Fermer</button>
             </section>
         </div>
     </main>

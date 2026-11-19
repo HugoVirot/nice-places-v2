@@ -9,20 +9,20 @@
     <section v-else-if="!userStore.userLoggedIn" class="container p-5 text-center">
         <p>Connectez-vous pour consulter les lieux que vous avez proposés.</p>
         <router-link to="/connexion">
-            <button class="btn btn-lg greenButton rounded-pill">Se connecter</button>
+            <button class="btn btn-lg greenButton rounded">Se connecter</button>
         </router-link>
     </section>
 
     <section v-else-if="error" class="container p-5 text-center" role="alert">
         <p>{{ error }}</p>
-        <button type="button" class="btn greenButton rounded-pill" @click="loadPostedPlaces">Réessayer</button>
+        <button type="button" class="btn greenButton rounded" @click="loadPostedPlaces">Réessayer</button>
     </section>
 
     <section v-else-if="!postedPlaces.length" class="container p-5 text-center">
         <i class="greenIcon fa-solid fa-xmark fa-5x" aria-hidden="true"></i>
         <p>Vous n'avez posté aucun lieu.</p>
         <router-link to="/proposerlieu">
-            <button class="btn btn-lg mt-3 greenButton rounded-pill">Proposer un lieu</button>
+            <button class="btn btn-lg mt-3 greenButton rounded">Proposer un lieu</button>
         </router-link>
     </section>
 
@@ -36,9 +36,14 @@
                     </span>
                 </p>
                 <PlaceCard :place="place" />
-                <router-link :to="`/modifierlieu/${place.id}`" class="btn greenButton rounded-pill mt-2">
-                    Modifier ce lieu
-                </router-link>
+                <div class="d-flex flex-wrap justify-content-center gap-2 mt-3">
+                    <router-link :to="`/modifierlieu/${place.id}`" class="btn greenButton rounded">
+                        Modifier ce lieu
+                    </router-link>
+                    <router-link :to="`/uploadimages/${place.id}`" class="btn blueButton rounded text-light">
+                        Ajouter des images pour ce lieu
+                    </router-link>
+                </div>
             </div>
         </div>
     </section>

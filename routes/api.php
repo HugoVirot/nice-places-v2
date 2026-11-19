@@ -9,7 +9,10 @@ use Illuminate\Validation\ValidationException;
 
 // ****************** Route Sanctum pour test utilisateur ****************
 Route::get('/user', function (Request $request) {
-    return $request->user();
+    $user = $request->user();
+    $user->loadMissing(['department.region', 'role']);
+
+    return $user;
 })->middleware('auth:sanctum');
 
 
@@ -22,7 +25,9 @@ Route::post('register', [App\Http\Controllers\API\UserController::class, 'store'
 Route::post('login', [App\Http\Controllers\API\LoginController::class, 'login'])->name('login');
 
 // déconnexion 
-Route::post('logout', [App\Http\Controllers\API\LoginController::class, 'logout'])->name('logout');
+Route::post('logout', [App\Http\Controllers\API\LoginController::class, 'logout'])
+    ->middleware('auth:sanctum')
+    ->name('logout');
 
 
 // ************* Pour toutes les routes : apiResource = mode ressource version API, sans create et edit ****************

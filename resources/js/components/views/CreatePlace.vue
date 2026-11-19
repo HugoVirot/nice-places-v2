@@ -267,9 +267,9 @@ const sendData = async () => {
                             </details>
 
                             <p class="form-text">La recherche d’adresse est fournie par le service de géocodage de la Géoplateforme (IGN).</p>
-                            <div class="text-center mt-4">
+                            <div class="mt-4">
                                 <button type="submit" :disabled="submitting || !categories.length || !selectedLocation"
-                                    class="btn btn-lg greenButton rounded-pill text-light">
+                                    class="btn btn-lg greenButton rounded text-light w-100">
                                     {{ submitting ? "Envoi en cours…" : "Proposer ce lieu" }}
                                 </button>
                             </div>
@@ -280,12 +280,12 @@ const sendData = async () => {
         </div>
     </div>
     <div v-else class="container">
-        <p class="mb-2">Vous devez être connecté pour proposer un place.</p>
-        <router-link to="/connexion"><button class="btn btn-lg greenButton mb-3 rounded-pill">Se connecter</button>
+        <p class="mb-2">Vous devez être connecté pour proposer un lieu.</p>
+        <router-link to="/connexion"><button class="btn btn-lg greenButton mb-3 rounded">Se connecter</button>
         </router-link>
 
         <p class="mb-2">Pas encore inscrit ?</p>
-        <router-link to="/inscription"><button class="btn btn-lg greenButton rounded-pill">Créer un compte</button>
+        <router-link to="/inscription"><button class="btn btn-lg greenButton rounded">Créer un compte</button>
         </router-link>
     </div>
 

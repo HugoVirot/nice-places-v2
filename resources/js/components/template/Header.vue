@@ -101,18 +101,27 @@
 </template>
 
 <script setup>
+import axios from "axios"
 import { useRouter } from "vue-router";
 import { useUserStore } from "../../stores/userStore"
 
 const userStore = useUserStore()
 const router = useRouter()
 
-const logOutUser = () => {
-  // on réinitialise le store
-  userStore.$reset()
+const logOutUser = async () => {
+  try {
+    const response = await axios.post("/api/logout")
+    userStore.clearAuth()
+    router.push("/successmessage/home/" + response.data.message)
+  } catch (error) {
+    if (error.response?.status === 401) {
+      userStore.clearAuth()
+      router.push("/connexion")
+      return
+    }
 
-  // on redirige vers l'accueil
-  router.push("/successmessage/home/Déconnexion réussie")
+    alert("Impossible de fermer votre session. Vérifiez votre connexion puis réessayez.")
+  }
 }
 </script>
 

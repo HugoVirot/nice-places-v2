@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\API;
 
 use App\Models\Image;
+use App\Models\Notification;
 use App\Models\Place;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
@@ -103,27 +105,51 @@ class ImageController extends BaseController
             return $this->sendError('Aucune modification fournie.', [], 422);
         }
 
-        $wasCover = $image->cover;
-        if (!empty($validated['cover']) && $image->place_id) {
-            Image::where('place_id', $image->place_id)->where('id', '!=', $image->id)->update(['cover' => false]);
-        }
-        $image->update($validated);
+        $previousStatus = $image->status;
+        DB::transaction(function () use ($validated, $image, $previousStatus) {
+            $wasCover = $image->cover;
+            if (!empty($validated['cover']) && $image->place_id) {
+                Image::where('place_id', $image->place_id)->where('id', '!=', $image->id)->update(['cover' => false]);
+            }
+            $image->update($validated);
 
-        if (
-            $wasCover
-            && $image->place_id
-            && $image->status !== 'validée'
-            && !Image::where('place_id', $image->place_id)
-                ->where('cover', true)
-                ->where('status', 'validée')
-                ->exists()
-        ) {
-            $nextCover = Image::where('place_id', $image->place_id)
-                ->where('status', 'validée')
-                ->where('id', '!=', $image->id)
-                ->first();
-            $nextCover?->update(['cover' => true]);
-        }
+            if (
+                $wasCover
+                && $image->place_id
+                && $image->status !== 'validée'
+                && !Image::where('place_id', $image->place_id)
+                    ->where('cover', true)
+                    ->where('status', 'validée')
+                    ->exists()
+            ) {
+                $nextCover = Image::where('place_id', $image->place_id)
+                    ->where('status', 'validée')
+                    ->where('id', '!=', $image->id)
+                    ->first();
+                $nextCover?->update(['cover' => true]);
+            }
+
+            if (
+                $image->status !== $previousStatus
+                && in_array($image->status, ['validée', 'refusée'], true)
+                && $image->user_id
+            ) {
+                $userName = htmlspecialchars($image->user->name, ENT_QUOTES, 'UTF-8');
+                $placeName = htmlspecialchars($image->place?->name ?? 'votre lieu', ENT_QUOTES, 'UTF-8');
+                $message = $image->status === 'validée'
+                    ? "Votre image pour le lieu « {$placeName} » a été acceptée et est maintenant visible sur Nice Places. Merci pour votre partage."
+                    : "Votre image pour le lieu « {$placeName} » n’a pas été acceptée.";
+
+                Notification::create([
+                    'title' => $image->status === 'validée'
+                        ? "Votre image pour « {$placeName} » a été acceptée"
+                        : "Votre image pour « {$placeName} » a été refusée",
+                    'message' => "Bonjour {$userName},<br><br>{$message}<br><br>Cordialement,<br>L’administration.",
+                    'user_id' => $image->user_id,
+                    'place_id' => $image->place_id,
+                ]);
+            }
+        });
 
         // On retourne la réponse en JSON
         $message = "L'image a bien été modifiée";

@@ -9,7 +9,7 @@
         <ValidationErrors :errors="validationErrors" v-if="validationErrors" />
 
         <div class="row justify-content-center p-2 p-lg-5">
-            <div class="col-md-8">
+            <div class="col-md-6">
                 <div class="card">
                     <div class="card-header text-white mb-3">Entrez ici vos informations</div>
 
@@ -18,27 +18,27 @@
                         <form @submit.prevent="logIn">
 
                             <div class="form-group row m-2">
-                                <label for="email" class="col-md-4 col-form-label text-md-right">e-mail</label>
+                                <label for="email" class="col-md-4 col-form-label text-md-right fw-bold">e-mail</label>
 
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <input v-model="email" id="email" type="email" class="form-control" name="email"
                                         required autocomplete="email">
                                 </div>
                             </div>
 
                             <div class="form-group row m-2">
-                                <label for="password" class="col-md-4 col-form-label text-md-right">mot de passe</label>
+                                <label for="password" class="col-md-4 col-form-label text-md-right fw-bold">mot de passe</label>
 
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <input v-model="password" id="password" type="password" class="form-control"
                                         name="password" required autocomplete="new-password">
                                 </div>
                             </div>
 
-                            <div class="form-group row mt-3 text-center">
-                                <div class="col-md-6 offset-md-3">
+                            <div class="form-group row my-4 text-center">
+                                <div class="col-md-4 offset-md-4">
                                     <button type="submit" id="valider"
-                                        class="btn btn-lg greenButton rounded-pill text-light btn-info">
+                                        class="btn btn-lg greenButton rounded text-light btn-info w-100">
                                         Valider
                                     </button>
                                 </div>

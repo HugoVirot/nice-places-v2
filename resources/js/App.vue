@@ -210,7 +210,7 @@ onBeforeMount(() => {
 					</div>
 				</div>
 
-				<router-link to="/inscription"><button class="btn btn-lg greenButton mt-3 rounded-pill">Je
+				<router-link to="/inscription"><button class="btn btn-lg greenButton mt-3 rounded">Je
 						m'inscris</button>
 				</router-link>
 			</div>
@@ -249,7 +249,7 @@ onBeforeMount(() => {
 
 				</div>
 
-				<router-link to="/categories"><button class="btn btn-lg blueButton mt-3 rounded-pill">Toutes les
+				<router-link to="/categories"><button class="btn btn-lg blueButton mt-3 rounded">Toutes les
 						catégories</button>
 				</router-link>
 
@@ -270,11 +270,12 @@ onBeforeMount(() => {
 
 					<div class="row m-1 p-1" id="topplaces">
 
-						<!-- ********************** boucle qui affiche les 3 places ************************* -->
+						<!-- ********************** boucle qui affiche les 3 lieux ************************* -->
 
-						<div v-for="(topPlace, index) in placesStore.threeTopPlaces" :key="topPlace.id"
-							class="mx-auto col-md-6 col-lg-4 p-2 border border-white d-flex flex-column justify-content-between"
-							:style="getPlaceImageStyle(topPlace)">
+						<router-link v-for="(topPlace, index) in placesStore.threeTopPlaces" :key="topPlace.id"
+							:to="`/lieu/${topPlace.id}`"
+							class="mx-auto col-md-6 col-lg-4 p-2 border border-white d-flex flex-column justify-content-between text-decoration-none text-white"
+							:style="getPlaceImageStyle(topPlace)" :aria-label="`Découvrir ${topPlace.name}`">
 							<div class="home-place-info">
 								<div class="home-place-heading">
 									<span class="ranking">#{{ index + 1 }}</span>
@@ -297,14 +298,11 @@ onBeforeMount(() => {
 								</div>
 							</div>
 
-							<router-link :to="`/lieu/${topPlace.id}`"><button
-									class="btn btn-lg greenButton rounded-pill">découvrir</button></router-link>
-
-						</div>
+						</router-link>
 
 					</div>
 
-					<router-link to="/toplieux"><button class="btn btn-lg blueButton mt-3 rounded-pill">Classement
+					<router-link to="/toplieux"><button class="btn btn-lg blueButton mt-3 rounded">Classement
 							complet</button>
 					</router-link>
 
@@ -328,9 +326,10 @@ onBeforeMount(() => {
 
 						<!-- ********************** boucle qui affiche les 3 derniers places ************************* -->
 
-						<div v-for="lastPlace in placesStore.threeLastPlaces" :key="lastPlace.id"
-							class="mx-auto col-md-6 col-lg-4 p-2 border border-white d-flex flex-column justify-content-between"
-							:style="getPlaceImageStyle(lastPlace)">
+						<router-link v-for="lastPlace in placesStore.threeLastPlaces" :key="lastPlace.id"
+							:to="`/lieu/${lastPlace.id}`"
+							class="mx-auto col-md-6 col-lg-4 p-2 border border-white d-flex flex-column justify-content-between text-decoration-none text-white"
+							:style="getPlaceImageStyle(lastPlace)" :aria-label="`Découvrir ${lastPlace.name}`">
 							<div class="home-place-info">
 								<div class="home-place-heading">
 									<span class="home-place-category-icon" v-html="lastPlace.category?.icon"></span>
@@ -349,15 +348,12 @@ onBeforeMount(() => {
 								</div>
 							</div>
 
-							<router-link :to="`/lieu/${lastPlace.id}`"><button
-									class="btn btn-lg greenButton rounded-pill">découvrir</button></router-link>
-
-						</div>
+						</router-link>
 
 					</div>
 				</div>
 
-				<router-link to="/proposerlieu"><button class="btn btn-lg blueButton mt-3 rounded-pill">Proposer un
+				<router-link to="/proposerlieu"><button class="btn btn-lg blueButton mt-3 rounded">Proposer un
 						lieu</button>
 				</router-link>
 
@@ -389,8 +385,7 @@ onBeforeMount(() => {
 					</div>
 				</div>
 
-				<router-link to="/inscription"><button class="btn btn-lg blueButton mt-3 rounded-pill">C'est décidé, je
-						m'inscris !</button>
+				<router-link to="/inscription"><button class="btn btn-lg blueButton mt-3 rounded">C'est parti !</button>
 				</router-link>
 			</section>
 
@@ -445,7 +440,7 @@ h2 {
 }
 
 .yellowStar {
-	color: yellow !important
+	color: #FFC106 !important
 }
 
 .categoryicon {

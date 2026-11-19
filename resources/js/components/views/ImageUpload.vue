@@ -60,12 +60,12 @@
                             </div>
 
                             <div class="form-group row mt-3 text-center">
-                                <div class="col-md-6 offset-md-3">
+                                <div class="col-md-8 offset-md-2 d-grid gap-2">
                                     <p class="form-text">Vous pourrez ajouter une image plus tard; l’image par défaut sera utilisée entre-temps.</p>
-                                    <button type="submit" class="btn btn-lg greenButton rounded-pill" :disabled="submitting || !selectedImage">
+                                    <button type="submit" class="btn btn-lg greenButton rounded w-100" :disabled="submitting || !selectedImage">
                                         {{ submitting ? "Envoi en cours…" : "Valider" }}
                                     </button>
-                                    <button type="button" class="btn btn-lg blueButton rounded-pill text-light ms-2"
+                                    <button type="button" class="btn btn-lg blueButton rounded text-light w-100"
                                         :disabled="submitting" @click="skipImage">
                                         Plus tard
                                     </button>

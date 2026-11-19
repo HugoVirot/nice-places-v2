@@ -35,4 +35,8 @@ defineProps(["place", "index"])
 .ranking {
     font-size: 4em;
 }
+
+.card {
+    border-radius: 15px;
+}
 </style>

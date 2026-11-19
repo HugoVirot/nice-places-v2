@@ -12,6 +12,7 @@ export const useUserStore = defineStore({
             id: "",
             roleId: null,
             department: "",
+            region: null,
             token: "",
             role: "",
             userLoggedIn: false,
@@ -44,11 +45,26 @@ export const useUserStore = defineStore({
             this.id = userData.id
             this.roleId = Number(userData.role?.id ?? userData.role_id) || null
             this.department = userData.department
-            this.region = userData.department ? userData.department.region.nom : null
-            this.role = userData.role.name
+            this.region = userData.department?.region?.nom ?? null
+            this.role = userData.role?.name ?? ""
 
             //on définit le statut de l'utilisateur : il est connecté
             this.userLoggedIn = true
+        },
+
+        clearAuth() {
+            this.name = ""
+            this.email = ""
+            this.id = ""
+            this.roleId = null
+            this.department = ""
+            this.token = ""
+            this.role = ""
+            this.region = null
+            this.userLoggedIn = false
+            this.userPlaces = ""
+            this.favorites = ""
+            this.notifications = ""
         },
 
         // mémoriser le fait qu'un choix a été fait par rapport à la géoloc

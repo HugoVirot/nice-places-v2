@@ -4,13 +4,13 @@
 
         <section v-else-if="loadError" class="container p-5 text-center" role="alert">
             <p class="alert alert-danger">{{ loadError }}</p>
-            <router-link :to="backPath" class="btn btn-outline-secondary rounded-pill">Retour</router-link>
+            <router-link :to="backPath" class="btn btn-outline-secondary rounded">Retour</router-link>
         </section>
 
         <section v-else-if="!canEdit" class="container p-5 text-center" role="alert">
             <h1>Modification impossible</h1>
             <p>Seul l’auteur du lieu ou un administrateur peut le modifier.</p>
-            <router-link to="/meslieuxpostes" class="btn btn-outline-secondary rounded-pill">Retour à mes lieux</router-link>
+            <router-link to="/meslieuxpostes" class="btn btn-outline-secondary rounded">Retour à mes lieux</router-link>
         </section>
 
         <template v-else>
@@ -165,12 +165,12 @@
                                     </div>
                                 </div>
 
-                                <div class="d-flex flex-wrap gap-2 justify-content-center mt-4">
-                                    <button type="submit" class="btn btn-lg greenButton rounded-pill"
+                                <div class="d-grid gap-2 mt-4">
+                                    <button type="submit" class="btn btn-lg greenButton rounded w-100"
                                         :disabled="saving">
                                         {{ saving ? "Enregistrement..." : "Enregistrer les modifications" }}
                                     </button>
-                                    <router-link :to="backPath" class="btn btn-lg btn-outline-secondary rounded-pill">
+                                    <router-link :to="backPath" class="btn btn-lg btn-outline-secondary rounded w-100">
                                         Annuler
                                     </router-link>
                                 </div>
